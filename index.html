@@ -2,40 +2,67 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>YouTube Thumbnail</title>
-  <link rel="stylesheet" href="style.css">
+  <title>YouTube Thumbnail Viewer</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #111;
+      color: white;
+      text-align: center;
+      padding: 30px;
+    }
+
+    input, button {
+      padding: 10px;
+      width: 90%;
+      max-width: 400px;
+      margin-top: 10px;
+      font-size: 16px;
+    }
+
+    img {
+      margin-top: 20px;
+      border-radius: 10px;
+      max-width: 100%;
+    }
+
+    a {
+      display: block;
+      margin-top: 20px;
+      font-size: 18px;
+      color: #00bfff;
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>YT Thumbnail Viewer</h1>
-    <input type="text" id="ytLink" placeholder="Paste YouTube link">
-    <button onclick="showThumbnail()">Show Thumbnail</button>
-    <div id="result"></div>
-  </div>
+  <h1>YouTube Thumbnail Viewer</h1>
+  <input type="text" id="ytLink" placeholder="Paste YouTube link here" />
+  <br />
+  <button onclick="showThumbnail()">Show Thumbnail</button>
+  <div id="result"></div>
 
   <script>
     function extractVideoID(url) {
-      const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^\s&]+)/;
+      const regex = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([\w-]{11})/;
       const match = url.match(regex);
       return match ? match[1] : null;
     }
 
     function showThumbnail() {
-      const url = document.getElementById('ytLink').value;
+      const url = document.getElementById("ytLink").value.trim();
       const videoId = extractVideoID(url);
       if (!videoId) {
-        alert("Invalid YouTube link");
+        alert("Invalid YouTube link!");
         return;
       }
 
-      const thumbURL = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-      const downloadLink = `https://apknixy.github.io/videoyt/?id=${videoId}`;
+      const thumbnailURL = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      const downloadPage = `https://apknixy.github.io/videoyt/?id=${videoId}`;
 
-      document.getElementById('result').innerHTML = `
-        <h3>Thumbnail:</h3>
-        <img src="${thumbURL}" width="100%" style="border-radius:10px" />
-        <p style="margin-top: 20px;">Go to download page:</p>
-        <a href="${downloadLink}" style="font-size:18px; color:skyblue; text-decoration:underline;">Download</a>
+      document.getElementById("result").innerHTML = `
+        <img src="${thumbnailURL}" alt="YouTube Thumbnail" onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg';" />
+        <a href="${downloadPage}">Download</a>
       `;
     }
   </script>
