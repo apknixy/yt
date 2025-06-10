@@ -33,6 +33,19 @@
       color: #00bfff;
       text-decoration: underline;
     }
+
+    #copyBox {
+      background: #222;
+      color: #0f0;
+      border: 1px solid #555;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 10px;
+      width: 90%;
+      max-width: 400px;
+      word-break: break-all;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -44,6 +57,12 @@
 
   <script>
     function extractVideoID(url) {
+      url = decodeURIComponent(url.trim());
+      // Remove any extra parameters like ?si=...
+      if (url.includes("?")) {
+        url = url.split("?")[0];
+      }
+
       const regex = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([\w-]{11})/;
       const match = url.match(regex);
       return match ? match[1] : null;
@@ -63,7 +82,18 @@
       document.getElementById("result").innerHTML = `
         <img src="${thumbnailURL}" alt="YouTube Thumbnail" onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg';" />
         <a href="${downloadPage}">Download</a>
+        <div id="copyBox" onclick="copyLink(this)">🔗 ${downloadPage}</div>
       `;
+    }
+
+    function copyLink(elem) {
+      const temp = document.createElement("input");
+      temp.value = elem.textContent.replace("🔗", "").trim();
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand("copy");
+      document.body.removeChild(temp);
+      alert("Link copied to clipboard!");
     }
   </script>
 </body>
