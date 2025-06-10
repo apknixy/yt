@@ -1,34 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Downloader</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>YouTube Thumbnail</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>YouTube Video & Thumbnail Downloader</h1>
-        <div class="input-group">
-            <input type="text" id="youtubeLink" placeholder="Paste YouTube link here..." required>
-            <button id="downloadBtn">Get Downloads</button>
-        </div>
-        <div id="loading" class="hidden">Loading...</div>
-        <div id="error" class="hidden error-message"></div>
-        <div id="results" class="hidden">
-            <div class="video-info">
-                <img id="thumbnail" src="" alt="Video Thumbnail">
-                <h3 id="videoTitle"></h3>
-                <p id="videoUploader"></p>
-            </div>
-            <div class="download-options">
-                <h4>Video Download Options:</h4>
-                <div id="videoDownloadLinks"></div>
-                <h4>Thumbnail Download Options:</h4>
-                <div id="thumbnailDownloadLinks"></div>
-            </div>
-        </div>
-    </div>
-    <script src="script.js"></script>
+  <div class="container">
+    <h1>YT Thumbnail Viewer</h1>
+    <input type="text" id="ytLink" placeholder="Paste YouTube link">
+    <button onclick="showThumbnail()">Show Thumbnail</button>
+    <div id="result"></div>
+  </div>
+
+  <script>
+    function extractVideoID(url) {
+      const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^\s&]+)/;
+      const match = url.match(regex);
+      return match ? match[1] : null;
+    }
+
+    function showThumbnail() {
+      const url = document.getElementById('ytLink').value;
+      const videoId = extractVideoID(url);
+      if (!videoId) {
+        alert("Invalid YouTube link");
+        return;
+      }
+
+      const thumbURL = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      const downloadLink = `https://apknixy.github.io/videoyt/?id=${videoId}`;
+
+      document.getElementById('result').innerHTML = `
+        <h3>Thumbnail:</h3>
+        <img src="${thumbURL}" width="100%" style="border-radius:10px" />
+        <p style="margin-top: 20px;">Go to download page:</p>
+        <a href="${downloadLink}" style="font-size:18px; color:skyblue; text-decoration:underline;">Download</a>
+      `;
+    }
+  </script>
 </body>
 </html>
