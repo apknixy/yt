@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>YouTube Video & Thumbnail Downloader</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>YouTube Downloader</h1>
+    <input type="text" id="ytLink" placeholder="Paste YouTube Link Here">
+    
+    <div class="buttons">
+      <button onclick="downloadThumbnail()">Get Thumbnail</button>
+      <button onclick="redirectToDownload()">Download Video</button>
+    </div>
+
+    <div id="thumbnailResult"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
