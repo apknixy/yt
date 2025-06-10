@@ -1,107 +1,30 @@
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f7f6;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
-    color: #333;
+  font-family: Arial, sans-serif;
+  background: #121212;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  margin: 0;
 }
 
 .container {
-    background-color: #ffffff;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 600px;
-    text-align: center;
-}
-
-h1 {
-    color: #007bff;
-    margin-bottom: 25px;
-}
-
-.input-group {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+  text-align: center;
+  background: #1f1f1f;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 0 10px rgba(255,255,255,0.1);
+  width: 90%;
+  max-width: 500px;
 }
 
 input[type="text"] {
-    flex-grow: 1;
-    padding: 12px 15px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 16px;
-}
-
-button {
-    background-color: #007bff;
-    color: white;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
-}
-
-button:hover {
-    background-color: #0056b3;
-}
-
-.hidden {
-    display: none;
-}
-
-.error-message {
-    color: #dc3545;
-    margin-top: 15px;
-}
-
-.video-info {
-    margin-top: 20px;
-    border-top: 1px solid #eee;
-    padding-top: 20px;
-}
-
-#thumbnail {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-    margin-bottom: 15px;
-}
-
-h3, p {
-    margin: 5px 0;
-}
-
-.download-options {
-    margin-top: 25px;
-    text-align: left;
-}
-
-.download-options h4 {
-    color: #007bff;
-    margin-bottom: 10px;
-}
-
-.download-options a {
-    display: block;
-    padding: 10px 0;
-    color: #28a745;
-    text-decoration: none;
-    border: 1px solid #28a745;
-    border-radius: 5px;
-    margin-bottom: 8px;
-    text-align: center;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.download-options a:hover {
-    background-color: #28a745;
-    color: white;
+  width: 90%;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  margin-top: 15px;
+  text-align: center;
 }
