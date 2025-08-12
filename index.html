@@ -1,100 +1,470 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>YouTube Thumbnail Viewer</title>
-  <style>
-    body {
-      font-family: Arial;
-      background: #111;
-      color: white;
-      text-align: center;
-      padding: 30px;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro-Art Studio</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
 
-    input, button {
-      padding: 10px;
-      width: 90%;
-      max-width: 400px;
-      margin-top: 10px;
-      font-size: 16px;
-    }
+        h1 {
+            font-size: 2.5em;
+            color: #1a73e8;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
 
-    img {
-      margin-top: 20px;
-      border-radius: 10px;
-      max-width: 100%;
-    }
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+        }
 
-    a {
-      display: block;
-      margin-top: 20px;
-      font-size: 18px;
-      color: #00bfff;
-      text-decoration: underline;
-    }
+        #canvas-container {
+            border: 3px solid #1a73e8;
+            background-color: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
 
-    #copyBox {
-      background: #222;
-      color: #0f0;
-      border: 1px solid #555;
-      padding: 10px;
-      font-size: 16px;
-      margin-top: 10px;
-      width: 90%;
-      max-width: 400px;
-      word-break: break-all;
-      cursor: pointer;
-    }
-  </style>
+        canvas {
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .control-box {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 180px;
+        }
+
+        .control-box h3 {
+            margin: 0;
+            font-size: 1.1em;
+            color: #555;
+            text-align: center;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .control-group {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tool-button, .color-box, .action-button {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            border-radius: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            transition: all 0.2s;
+            background-color: #fff;
+        }
+        
+        .tool-button.active, .color-box.active, .action-button.active {
+            border-color: #1a73e8;
+            box-shadow: 0 0 6px #1a73e8;
+            transform: scale(1.05);
+            background-color: #e8f0fe;
+        }
+        .color-box {
+            border-radius: 50%;
+        }
+
+        .tool-button:hover, .color-box:hover, .action-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        button {
+            padding: 10px 15px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        
+        #clearButton { background-color: #dc3545; color: white; }
+        #clearButton:hover { background-color: #c82333; }
+
+        #saveButton { background-color: #28a745; color: white; }
+        #saveButton:hover { background-color: #218838; }
+        
+        #pdfButton { background-color: #ffc107; color: #333; }
+        #pdfButton:hover { background-color: #e0a800; }
+        
+        #brushSizeSlider {
+            width: 100%;
+            -webkit-appearance: none;
+            background: #ccc;
+            outline: none;
+            border-radius: 4px;
+        }
+        #brushSizeSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #1a73e8;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+        
+        .color-input-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+        }
+        .color-input-container input[type="color"] {
+            -webkit-appearance: none;
+            border: 1px solid #ccc;
+            width: 30px;
+            height: 30px;
+            background: none;
+            cursor: pointer;
+            padding: 0;
+            border-radius: 50%;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .color-input-container input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 50%;
+        }
+        .color-input-container input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+            border-radius: 50%;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-  <h1>YouTube Thumbnail Viewer</h1>
-  <input type="text" id="ytLink" placeholder="Paste YouTube link here" />
-  <br />
-  <button onclick="showThumbnail()">Show Thumbnail</button>
-  <div id="result"></div>
 
-  <script>
-    function extractVideoID(url) {
-      url = decodeURIComponent(url.trim());
-      // Remove any extra parameters like ?si=...
-      if (url.includes("?")) {
-        url = url.split("?")[0];
-      }
+    <h1>Professional Art Studio</h1>
 
-      const regex = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|v\/))([\w-]{11})/;
-      const match = url.match(regex);
-      return match ? match[1] : null;
-    }
+    <div id="app-container">
+        <div id="canvas-container">
+            <canvas id="drawingCanvas" width="800" height="600"></canvas>
+        </div>
+        
+        <div id="controls">
+            <div class="control-box">
+                <h3>Tools</h3>
+                <div class="control-group">
+                    <div class="tool-button active" id="pencilButton" data-tool="pencil" title="Pencil Tool">✏️</div>
+                    <div class="tool-button" id="bucketButton" data-tool="bucket" title="Fill with Color">🎨</div>
+                    <div class="tool-button" id="textButton" data-tool="text" title="Text Tool">A</div>
+                    <div class="tool-button" id="eraserButton" data-tool="eraser" title="Eraser Tool">🧽</div>
+                    <div class="tool-button" id="colorPickerButton" data-tool="color-picker" title="Color Picker Tool">💧</div>
+                </div>
+            </div>
 
-    function showThumbnail() {
-      const url = document.getElementById("ytLink").value.trim();
-      const videoId = extractVideoID(url);
-      if (!videoId) {
-        alert("Invalid YouTube link!");
-        return;
-      }
+            <div class="control-box">
+                <h3>Colors</h3>
+                <div class="control-group">
+                    <div class="color-box active" style="background-color: #000000;" data-color="#000000"></div>
+                    <div class="color-box" style="background-color: #FF0000;" data-color="#FF0000"></div>
+                    <div class="color-box" style="background-color: #0000FF;" data-color="#0000FF"></div>
+                    <div class="color-box" style="background-color: #008000;" data-color="#008000"></div>
+                    <div class="color-box" style="background-color: #FFFF00;" data-color="#FFFF00"></div>
+                    <div class="color-box" style="background-color: #FFA500;" data-color="#FFA500"></div>
+                    <div class="color-box" style="background-color: #800080;" data-color="#800080"></div>
+                    <div class="color-box" style="background-color: #FFC0CB;" data-color="#FFC0CB"></div>
+                    <div class="color-box" style="background-color: #A52A2A;" data-color="#A52A2A"></div>
+                    <div class="color-box" style="background-color: #808080;" data-color="#808080"></div>
+                    <div class="color-box" style="background-color: #00FFFF;" data-color="#00FFFF"></div>
+                    <div class="color-box" style="background-color: #F5DEB3;" data-color="#F5DEB3"></div>
+                </div>
+                <div class="color-input-container">
+                    <input type="color" id="customColorPicker" value="#1a73e8" title="Edit Colors">
+                </div>
+            </div>
+            
+            <div class="control-box">
+                <h3>Settings & Actions</h3>
+                <div class="control-group">
+                    <label for="brushSizeSlider">Size:</label>
+                    <input type="range" id="brushSizeSlider" min="1" max="50" value="5">
+                </div>
+                <button id="clearButton">Clear Canvas</button>
+                <button id="saveButton">🖼️ Save as PNG</button>
+                <button id="pdfButton">📄 Save as PDF</button>
+            </div>
+        </div>
+    </div>
 
-      const thumbnailURL = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-      const downloadPage = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        const colorBoxes = document.querySelectorAll('.color-box');
+        const toolButtons = document.querySelectorAll('.tool-button');
+        const clearButton = document.getElementById('clearButton');
+        const saveButton = document.getElementById('saveButton');
+        const pdfButton = document.getElementById('pdfButton');
+        const brushSizeSlider = document.getElementById('brushSizeSlider');
+        const customColorPicker = document.getElementById('customColorPicker');
 
-      document.getElementById("result").innerHTML = `
-        <img src="${thumbnailURL}" alt="YouTube Thumbnail" onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg';" />
-        <a href="${downloadPage}">Download</a>
-        <div id="copyBox" onclick="copyLink(this)">🔗 ${downloadPage}</div>
-      `;
-    }
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let currentColor = '#000000';
+        let currentTool = 'pencil';
+        let currentBrushSize = 5;
 
-    function copyLink(elem) {
-      const temp = document.createElement("input");
-      temp.value = elem.textContent.replace("🔗", "").trim();
-      document.body.appendChild(temp);
-      temp.select();
-      document.execCommand("copy");
-      document.body.removeChild(temp);
-      alert("Link copied to clipboard!");
-    }
-  </script>
+        // Initial canvas setup
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = currentColor;
+        ctx.lineWidth = currentBrushSize;
+        ctx.fillStyle = currentColor;
+        
+        // Speak when the app loads
+        if (window.speechSynthesis) {
+            const speech = new SpeechSynthesisUtterance("Welcome to Pro Art Studio!");
+            speech.lang = 'en-US';
+            window.speechSynthesis.speak(speech);
+        }
+
+        function draw(e) {
+            if (!isDrawing || (currentTool !== 'pencil' && currentTool !== 'eraser')) return;
+            
+            const clientX = e.clientX || (e.touches ? e.touches[0].clientX : null);
+            const clientY = e.clientY || (e.touches ? e.touches[0].clientY : null);
+            if (clientX === null || clientY === null) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const offsetX = clientX - rect.left;
+            const offsetY = clientY - rect.top;
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(offsetX, offsetY);
+            ctx.stroke();
+            
+            [lastX, lastY] = [offsetX, offsetY];
+        }
+
+        function handleStart(e) {
+            const clientX = e.clientX || (e.touches ? e.touches[0].clientX : null);
+            const clientY = e.clientY || (e.touches ? e.touches[0].clientY : null);
+            if (clientX === null || clientY === null) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const offsetX = clientX - rect.left;
+            const offsetY = clientY - rect.top;
+            
+            if (currentTool === 'pencil' || currentTool === 'eraser') {
+                isDrawing = true;
+                [lastX, lastY] = [offsetX, offsetY];
+            } else if (currentTool === 'text') {
+                const text = prompt("Enter text:");
+                if (text) {
+                    ctx.font = `${currentBrushSize * 4}px 'Roboto', sans-serif`;
+                    ctx.fillStyle = currentColor;
+                    ctx.fillText(text, offsetX, offsetY);
+                }
+            } else if (currentTool === 'bucket') {
+                fill(offsetX, offsetY);
+            } else if (currentTool === 'color-picker') {
+                const pixelData = ctx.getImageData(offsetX, offsetY, 1, 1).data;
+                const pickedColor = `rgb(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]})`;
+                updateColors(pickedColor);
+            }
+        }
+
+        function handleEnd() {
+            isDrawing = false;
+        }
+
+        // Flood Fill / Bucket Tool (same code)
+        function fill(x, y) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            const targetColor = getPixelColor(x, y, data, canvas.width);
+            const fillColor = hexToRgb(currentColor);
+
+            if (isSameColor(targetColor, fillColor)) return;
+
+            const stack = [[x, y]];
+
+            while (stack.length) {
+                const [cx, cy] = stack.pop();
+                const pixelColor = getPixelColor(cx, cy, data, canvas.width);
+
+                if (cx >= 0 && cx < canvas.width && cy >= 0 && cy < canvas.height && isSameColor(pixelColor, targetColor)) {
+                    setPixelColor(cx, cy, data, canvas.width, fillColor);
+                    stack.push([cx + 1, cy]);
+                    stack.push([cx - 1, cy]);
+                    stack.push([cx, cy + 1]);
+                    stack.push([cx, cy - 1]);
+                }
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+        
+        function getPixelColor(x, y, data, width) {
+            const index = (y * width + x) * 4;
+            return [data[index], data[index + 1], data[index + 2]];
+        }
+        
+        function setPixelColor(x, y, data, width, color) {
+            const index = (y * width + x) * 4;
+            data[index] = color[0];
+            data[index + 1] = color[1];
+            data[index + 2] = color[2];
+            data[index + 3] = 255;
+        }
+
+        function isSameColor(color1, color2) {
+            if (!color1 || !color2) return false;
+            return color1[0] === color2[0] && color1[1] === color2[1] && color1[2] === color2[2];
+        }
+
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : null;
+        }
+        
+        function rgbToHex(rgb) {
+            const toHex = (c) => `0${c.toString(16)}`.slice(-2);
+            return `#${toHex(rgb[0])}${toHex(rgb[1])}${toHex(rgb[2])}`;
+        }
+
+        // Event Listeners for Mouse and Touch
+        canvas.addEventListener('mousedown', handleStart);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('mouseout', handleEnd);
+
+        canvas.addEventListener('touchstart', handleStart);
+        canvas.addEventListener('touchmove', draw);
+        canvas.addEventListener('touchend', handleEnd);
+        
+        function updateColors(color) {
+            colorBoxes.forEach(b => b.classList.remove('active'));
+            currentColor = color;
+            ctx.strokeStyle = currentColor;
+            ctx.fillStyle = currentColor;
+            
+            // Update color picker
+            if (color.startsWith('rgb')) {
+                const rgb = color.match(/\d+/g).map(Number);
+                customColorPicker.value = rgbToHex(rgb);
+            } else {
+                 customColorPicker.value = color;
+            }
+
+            if (currentTool !== 'eraser') {
+                toolButtons.forEach(b => b.classList.remove('active'));
+                document.getElementById('pencilButton').classList.add('active');
+                currentTool = 'pencil';
+            }
+        }
+        
+        // Color selection from color boxes
+        colorBoxes.forEach(box => {
+            box.addEventListener('click', () => {
+                updateColors(box.dataset.color);
+                box.classList.add('active');
+            });
+        });
+        
+        // Custom color picker
+        customColorPicker.addEventListener('input', (e) => {
+            updateColors(e.target.value);
+        });
+
+        // Tool selection
+        toolButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                toolButtons.forEach(b => b.classList.remove('active'));
+                button.classList.add('active');
+                currentTool = button.dataset.tool;
+                
+                if (currentTool === 'eraser') {
+                    ctx.strokeStyle = '#FFFFFF';
+                    ctx.lineWidth = brushSizeSlider.value * 2;
+                } else if (currentTool === 'pencil') {
+                    ctx.strokeStyle = currentColor;
+                    ctx.lineWidth = brushSizeSlider.value;
+                }
+            });
+        });
+
+        // Brush size slider
+        brushSizeSlider.addEventListener('input', (e) => {
+            currentBrushSize = e.target.value;
+            if (currentTool === 'eraser') {
+                 ctx.lineWidth = currentBrushSize * 2;
+            } else {
+                 ctx.lineWidth = currentBrushSize;
+            }
+        });
+
+        // Clear button
+        clearButton.addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // Save PNG button
+        saveButton.addEventListener('click', () => {
+            const dataURL = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'my-drawing.png';
+            link.href = dataURL;
+            link.click();
+        });
+
+        // Save PDF button
+        pdfButton.addEventListener('click', () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'px', [canvas.width, canvas.height]);
+            const imgData = canvas.toDataURL('image/png');
+            doc.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+            doc.save('my-drawing.pdf');
+        });
+    </script>
 </body>
 </html>
