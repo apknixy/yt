@@ -1,470 +1,280 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro-Art Studio</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
-        
-        body {
-            font-family: 'Roboto', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: #f0f2f5;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>DrawFun – Mobile Paint (Touch‑Friendly)</title>
+  <style>
+    :root{
+      --bg:#0b1220;--panel:#111827;--panel2:#0f1626;--text:#e5e7eb;--muted:#9ca3af;--accent:#22c55e;--accent2:#60a5fa;--danger:#ef4444;--border:#1f2937;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#060a18);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;}
+    .app{display:grid;grid-template-rows:auto 1fr auto;min-height:100%}/* Top bar */
+header{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+header .title{font-weight:700}
+header .sp{flex:1}
+.btn{background:#17233a;border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:12px;cursor:pointer;font-size:14px}
+.btn:active{transform:scale(.98)}
+.btn.warn{background:#1f2937;border-color:#374151}
+.btn.red{background:#1f2028;border-color:#4b1e1e;color:#fecaca}
 
-        h1 {
-            font-size: 2.5em;
-            color: #1a73e8;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
+/* Stage */
+main{position:relative;overflow:hidden}
+.stage-wrap{position:relative;display:flex;justify-content:center;align-items:center;height:100%;}
+.canvas-frame{position:relative;display:inline-block;margin:10px;background:#0b1222;border:1px solid var(--border);border-radius:16px;box-shadow:0 8px 26px rgba(0,0,0,.45);touch-action:none}
+canvas{display:block;background:#ffffff;border-radius:14px;max-width:100vw;max-height:100%;}
+#overlay{position:absolute;left:0;top:0;pointer-events:none}
+.checker{position:absolute;inset:10px;background:conic-gradient(#eee 0 25%, #fff 0 50%) 0 0/24px 24px;opacity:.45;border-radius:12px;pointer-events:none}
 
-        #app-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 25px;
-            background-color: #ffffff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            border: 1px solid #e0e0e0;
-        }
+/* Tool dock (bottom) */
+.dock{position:sticky;bottom:0;background:var(--panel2);border-top:1px solid var(--border);padding:8px 8px 12px;}
+.row{display:flex;gap:8px;align-items:center;overflow:auto;-webkit-overflow-scrolling:touch}
+.row + .row{margin-top:8px}
+.tool{min-width:46px;min-height:46px;border-radius:12px;border:1px solid var(--border);background:#0e1629;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer}
+.tool.active{outline:2px solid var(--accent2)}
+.seg{display:flex;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.seg .segbtn{padding:8px 10px;border-right:1px solid var(--border);background:#0e1629}
+.seg .segbtn:last-child{border-right:none}
+.chip{border:1px solid var(--border);border-radius:10px;padding:6px 10px;background:#0e1629;font-size:13px;white-space:nowrap}
+.color{width:32px;height:32px;border-radius:10px;border:1px solid var(--border);flex:0 0 auto}
+.color.active{outline:2px solid var(--accent)}
+.slider{accent-color:#60a5fa}
 
-        #canvas-container {
-            border: 3px solid #1a73e8;
-            background-color: #fff;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
+/* Floating text input for Text tool */
+.floating-input{position:absolute;min-width:120px;max-width:80vw;padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:#fff;color:#111;font:16px/1.3 system-ui, sans-serif;box-shadow:0 8px 20px rgba(0,0,0,.35)}
 
-        canvas {
-            cursor: crosshair;
-            touch-action: none;
-        }
+.status{position:absolute;left:8px;top:8px;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);padding:6px 10px;border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--muted);z-index:5}
 
-        #controls {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: flex-start;
-            gap: 20px;
-            width: 100%;
-        }
+@media (min-width:880px){ .tool{min-width:42px;min-height:42px} }
 
-        .control-box {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            min-width: 180px;
-        }
-
-        .control-box h3 {
-            margin: 0;
-            font-size: 1.1em;
-            color: #555;
-            text-align: center;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .control-group {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .tool-button, .color-box, .action-button {
-            width: 40px;
-            height: 40px;
-            border: 1px solid #ccc;
-            cursor: pointer;
-            border-radius: 6px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 20px;
-            transition: all 0.2s;
-            background-color: #fff;
-        }
-        
-        .tool-button.active, .color-box.active, .action-button.active {
-            border-color: #1a73e8;
-            box-shadow: 0 0 6px #1a73e8;
-            transform: scale(1.05);
-            background-color: #e8f0fe;
-        }
-        .color-box {
-            border-radius: 50%;
-        }
-
-        .tool-button:hover, .color-box:hover, .action-button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        button {
-            padding: 10px 15px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            transition: background-color 0.2s, transform 0.2s;
-        }
-        
-        #clearButton { background-color: #dc3545; color: white; }
-        #clearButton:hover { background-color: #c82333; }
-
-        #saveButton { background-color: #28a745; color: white; }
-        #saveButton:hover { background-color: #218838; }
-        
-        #pdfButton { background-color: #ffc107; color: #333; }
-        #pdfButton:hover { background-color: #e0a800; }
-        
-        #brushSizeSlider {
-            width: 100%;
-            -webkit-appearance: none;
-            background: #ccc;
-            outline: none;
-            border-radius: 4px;
-        }
-        #brushSizeSlider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            background: #1a73e8;
-            cursor: pointer;
-            border-radius: 50%;
-            border: 2px solid #fff;
-        }
-        
-        .color-input-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 5px;
-        }
-        .color-input-container input[type="color"] {
-            -webkit-appearance: none;
-            border: 1px solid #ccc;
-            width: 30px;
-            height: 30px;
-            background: none;
-            cursor: pointer;
-            padding: 0;
-            border-radius: 50%;
-            overflow: hidden;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        .color-input-container input[type="color"]::-webkit-color-swatch {
-            border: none;
-            border-radius: 50%;
-        }
-        .color-input-container input[type="color"]::-webkit-color-swatch-wrapper {
-            padding: 0;
-            border-radius: 50%;
-        }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  </style>
+  <!-- Optional PDF export (requires internet). Remove if offline only. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
-
-    <h1>Professional Art Studio</h1>
-
-    <div id="app-container">
-        <div id="canvas-container">
-            <canvas id="drawingCanvas" width="800" height="600"></canvas>
-        </div>
-        
-        <div id="controls">
-            <div class="control-box">
-                <h3>Tools</h3>
-                <div class="control-group">
-                    <div class="tool-button active" id="pencilButton" data-tool="pencil" title="Pencil Tool">✏️</div>
-                    <div class="tool-button" id="bucketButton" data-tool="bucket" title="Fill with Color">🎨</div>
-                    <div class="tool-button" id="textButton" data-tool="text" title="Text Tool">A</div>
-                    <div class="tool-button" id="eraserButton" data-tool="eraser" title="Eraser Tool">🧽</div>
-                    <div class="tool-button" id="colorPickerButton" data-tool="color-picker" title="Color Picker Tool">💧</div>
-                </div>
-            </div>
-
-            <div class="control-box">
-                <h3>Colors</h3>
-                <div class="control-group">
-                    <div class="color-box active" style="background-color: #000000;" data-color="#000000"></div>
-                    <div class="color-box" style="background-color: #FF0000;" data-color="#FF0000"></div>
-                    <div class="color-box" style="background-color: #0000FF;" data-color="#0000FF"></div>
-                    <div class="color-box" style="background-color: #008000;" data-color="#008000"></div>
-                    <div class="color-box" style="background-color: #FFFF00;" data-color="#FFFF00"></div>
-                    <div class="color-box" style="background-color: #FFA500;" data-color="#FFA500"></div>
-                    <div class="color-box" style="background-color: #800080;" data-color="#800080"></div>
-                    <div class="color-box" style="background-color: #FFC0CB;" data-color="#FFC0CB"></div>
-                    <div class="color-box" style="background-color: #A52A2A;" data-color="#A52A2A"></div>
-                    <div class="color-box" style="background-color: #808080;" data-color="#808080"></div>
-                    <div class="color-box" style="background-color: #00FFFF;" data-color="#00FFFF"></div>
-                    <div class="color-box" style="background-color: #F5DEB3;" data-color="#F5DEB3"></div>
-                </div>
-                <div class="color-input-container">
-                    <input type="color" id="customColorPicker" value="#1a73e8" title="Edit Colors">
-                </div>
-            </div>
-            
-            <div class="control-box">
-                <h3>Settings & Actions</h3>
-                <div class="control-group">
-                    <label for="brushSizeSlider">Size:</label>
-                    <input type="range" id="brushSizeSlider" min="1" max="50" value="5">
-                </div>
-                <button id="clearButton">Clear Canvas</button>
-                <button id="saveButton">🖼️ Save as PNG</button>
-                <button id="pdfButton">📄 Save as PDF</button>
-            </div>
-        </div>
+<div class="app">
+  <header>
+    <div class="title">🎨 DrawFun</div>
+    <div class="sp"></div>
+    <label class="btn" for="fileInput">📥 Import</label>
+    <input id="fileInput" type="file" accept="image/*" hidden />
+    <button class="btn" id="btnUndo">↶ Undo</button>
+    <button class="btn" id="btnRedo">↷ Redo</button>
+    <button class="btn warn" id="btnPNG">💾 PNG</button>
+    <button class="btn" id="btnPDF">📄 PDF</button>
+  </header>  <main>
+    <div class="status" id="status">Ready</div>
+    <div class="stage-wrap">
+      <div class="canvas-frame" id="frame">
+        <div class="checker" id="checker"></div>
+        <canvas id="canvas" width="1200" height="800"></canvas>
+        <canvas id="overlay" width="1200" height="800"></canvas>
+      </div>
     </div>
+  </main>  <footer class="dock">
+    <div class="row" id="toolsRow" aria-label="Tools">
+      <button class="tool active" data-tool="brush" title="Brush">🖌</button>
+      <button class="tool" data-tool="pencil" title="Pencil">✏️</button>
+      <button class="tool" data-tool="eraser" title="Eraser">🧽</button>
+      <button class="tool" data-tool="line" title="Line">／</button>
+      <button class="tool" data-tool="rect" title="Rectangle">▭</button>
+      <button class="tool" data-tool="ellipse" title="Ellipse">◯</button>
+      <button class="tool" data-tool="bucket" title="Fill">🪣</button>
+      <button class="tool" data-tool="picker" title="Color Picker">🎯</button>
+      <button class="tool" data-tool="text" title="Text">A</button>
+      <button class="tool" id="btnClear" title="Clear">🗑</button>
+      <button class="tool" id="btnBgToggle" title="BG Checker">⬜️</button>
+    </div><div class="row" aria-label="Brush controls">
+  <span class="chip">Size</span>
+  <input id="size" class="slider" type="range" min="1" max="60" value="12" />
+  <span class="chip">Opacity</span>
+  <input id="opacity" class="slider" type="range" min="0.1" max="1" step="0.05" value="1" />
+</div>
 
-    <script>
-        const canvas = document.getElementById('drawingCanvas');
-        const ctx = canvas.getContext('2d');
-        const colorBoxes = document.querySelectorAll('.color-box');
-        const toolButtons = document.querySelectorAll('.tool-button');
-        const clearButton = document.getElementById('clearButton');
-        const saveButton = document.getElementById('saveButton');
-        const pdfButton = document.getElementById('pdfButton');
-        const brushSizeSlider = document.getElementById('brushSizeSlider');
-        const customColorPicker = document.getElementById('customColorPicker');
+<div class="row" id="paletteRow" aria-label="Colors"></div>
 
-        let isDrawing = false;
-        let lastX = 0;
-        let lastY = 0;
-        let currentColor = '#000000';
-        let currentTool = 'pencil';
-        let currentBrushSize = 5;
+<div class="row" aria-label="Color pickers">
+  <input id="strokeColor" type="color" value="#111111" class="color" />
+  <input id="fillColor" type="color" value="#ffffff" class="color" title="Canvas background" />
+  <button class="btn" id="swapColors">⇄ Swap</button>
+</div>
 
-        // Initial canvas setup
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.strokeStyle = currentColor;
-        ctx.lineWidth = currentBrushSize;
-        ctx.fillStyle = currentColor;
-        
-        // Speak when the app loads
-        if (window.speechSynthesis) {
-            const speech = new SpeechSynthesisUtterance("Welcome to Pro Art Studio!");
-            speech.lang = 'en-US';
-            window.speechSynthesis.speak(speech);
-        }
+  </footer>
+</div><script>
+(function(){
+  // Elements
+  const C = document.getElementById('canvas');
+  const O = document.getElementById('overlay');
+  const ctx = C.getContext('2d');
+  const octx = O.getContext('2d');
+  const statusEl = document.getElementById('status');
+  const frame = document.getElementById('frame');
 
-        function draw(e) {
-            if (!isDrawing || (currentTool !== 'pencil' && currentTool !== 'eraser')) return;
-            
-            const clientX = e.clientX || (e.touches ? e.touches[0].clientX : null);
-            const clientY = e.clientY || (e.touches ? e.touches[0].clientY : null);
-            if (clientX === null || clientY === null) return;
+  // Controls
+  const toolsRow = document.getElementById('toolsRow');
+  const size = document.getElementById('size');
+  const opacity = document.getElementById('opacity');
+  const strokeColor = document.getElementById('strokeColor');
+  const fillColor = document.getElementById('fillColor');
+  const paletteRow = document.getElementById('paletteRow');
 
-            const rect = canvas.getBoundingClientRect();
-            const offsetX = clientX - rect.left;
-            const offsetY = clientY - rect.top;
+  const btnUndo = document.getElementById('btnUndo');
+  const btnRedo = document.getElementById('btnRedo');
+  const btnPNG = document.getElementById('btnPNG');
+  const btnPDF = document.getElementById('btnPDF');
+  const btnClear = document.getElementById('btnClear');
+  const btnBgToggle = document.getElementById('btnBgToggle');
+  const checker = document.getElementById('checker');
+  const fileInput = document.getElementById('fileInput');
+  const swapColors = document.getElementById('swapColors');
 
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(offsetX, offsetY);
-            ctx.stroke();
-            
-            [lastX, lastY] = [offsetX, offsetY];
-        }
+  // State
+  const state = { tool:'brush', down:false, start:[0,0], curr:[0,0] };
+  let undoStack = [], redoStack = []; const MAX_STACK=35;
 
-        function handleStart(e) {
-            const clientX = e.clientX || (e.touches ? e.touches[0].clientX : null);
-            const clientY = e.clientY || (e.touches ? e.touches[0].clientY : null);
-            if (clientX === null || clientY === null) return;
-            
-            const rect = canvas.getBoundingClientRect();
-            const offsetX = clientX - rect.left;
-            const offsetY = clientY - rect.top;
-            
-            if (currentTool === 'pencil' || currentTool === 'eraser') {
-                isDrawing = true;
-                [lastX, lastY] = [offsetX, offsetY];
-            } else if (currentTool === 'text') {
-                const text = prompt("Enter text:");
-                if (text) {
-                    ctx.font = `${currentBrushSize * 4}px 'Roboto', sans-serif`;
-                    ctx.fillStyle = currentColor;
-                    ctx.fillText(text, offsetX, offsetY);
-                }
-            } else if (currentTool === 'bucket') {
-                fill(offsetX, offsetY);
-            } else if (currentTool === 'color-picker') {
-                const pixelData = ctx.getImageData(offsetX, offsetY, 1, 1).data;
-                const pickedColor = `rgb(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]})`;
-                updateColors(pickedColor);
-            }
-        }
+  // Init
+  ctx.lineCap = ctx.lineJoin = 'round';
+  ctx.fillStyle = fillColor.value; ctx.fillRect(0,0,C.width,C.height);
+  pushUndo();
+  buildPalette();
+  fitToScreen();
+  window.addEventListener('resize', fitToScreen);
 
-        function handleEnd() {
-            isDrawing = false;
-        }
+  function fitToScreen(){
+    // Scale canvas to fit viewport while keeping pixels crisp
+    const pad = 20;
+    const vw = Math.min(window.innerWidth, document.body.clientWidth) - pad*2;
+    const vh = window.innerHeight - 220; // header+dock approx
+    const scale = Math.min(vw / C.width, vh / C.height);
+    C.style.width = (C.width * scale) + 'px';
+    C.style.height = (C.height * scale) + 'px';
+    O.style.width = C.style.width; O.style.height = C.style.height;
+    O.width = C.width; O.height = C.height; // keep same pixel space
+  }
 
-        // Flood Fill / Bucket Tool (same code)
-        function fill(x, y) {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            const targetColor = getPixelColor(x, y, data, canvas.width);
-            const fillColor = hexToRgb(currentColor);
+  function buildPalette(){
+    const colors = ['#000000','#3f3f46','#ef4444','#f97316','#f59e0b','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#ffffff','#9ca3af'];
+    paletteRow.innerHTML = '';
+    colors.forEach(c=>{
+      const b = document.createElement('button');
+      b.className = 'color'; b.style.background = c; b.title = c;
+      b.addEventListener('click',()=>{ strokeColor.value = normalizeHex(c); });
+      paletteRow.appendChild(b);
+    });
+  }
 
-            if (isSameColor(targetColor, fillColor)) return;
+  function normalizeHex(c){ const t=document.createElement('canvas').getContext('2d'); t.fillStyle=c; return t.fillStyle; }
 
-            const stack = [[x, y]];
+  // Tools switching
+  toolsRow.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.tool'); if(!btn) return;
+    if(btn.id==='btnClear'){ clearCanvas(); return; }
+    if(btn.id==='btnBgToggle'){ checker.classList.toggle('hidden'); return; }
+    [...toolsRow.children].forEach(x=>x.classList.remove('active'));
+    btn.classList.add('active');
+    state.tool = btn.dataset.tool || state.tool;
+    flashStatus('Tool: ' + state.tool);
+  });
 
-            while (stack.length) {
-                const [cx, cy] = stack.pop();
-                const pixelColor = getPixelColor(cx, cy, data, canvas.width);
+  // Touch helpers
+  function posFromEvent(evt){
+    const rect = C.getBoundingClientRect();
+    const t = evt.touches ? evt.touches[0] : evt;
+    const x = (t.clientX - rect.left) * (C.width / rect.width);
+    const y = (t.clientY - rect.top) * (C.height / rect.height);
+    return [x,y];
+  }
 
-                if (cx >= 0 && cx < canvas.width && cy >= 0 && cy < canvas.height && isSameColor(pixelColor, targetColor)) {
-                    setPixelColor(cx, cy, data, canvas.width, fillColor);
-                    stack.push([cx + 1, cy]);
-                    stack.push([cx - 1, cy]);
-                    stack.push([cx, cy + 1]);
-                    stack.push([cx, cy - 1]);
-                }
-            }
-            ctx.putImageData(imageData, 0, 0);
-        }
-        
-        function getPixelColor(x, y, data, width) {
-            const index = (y * width + x) * 4;
-            return [data[index], data[index + 1], data[index + 2]];
-        }
-        
-        function setPixelColor(x, y, data, width, color) {
-            const index = (y * width + x) * 4;
-            data[index] = color[0];
-            data[index + 1] = color[1];
-            data[index + 2] = color[2];
-            data[index + 3] = 255;
-        }
+  function down(evt){ evt.preventDefault(); state.down = true; state.start = posFromEvent(evt); state.curr = state.start;
+    if(state.tool==='picker'){
+      const px = ctx.getImageData(state.start[0], state.start[1], 1, 1).data;
+      strokeColor.value = rgbToHex(px[0],px[1],px[2]); flashStatus('Picked '+strokeColor.value); state.down=false; return;
+    }
+    if(state.tool==='bucket'){ floodFill(Math.floor(state.start[0]), Math.floor(state.start[1])); pushUndo(); return; }
+    if(state.tool==='text'){ createTextBox(state.start[0], state.start[1]); state.down=false; return; }
+  }
+  function move(evt){ if(!state.down) return; evt.preventDefault(); state.curr = posFromEvent(evt);
+    if(['brush','pencil','eraser'].includes(state.tool)){
+      drawStroke(state.start, state.curr);
+      state.start = state.curr;
+    } else {
+      drawOverlay();
+    }
+  }
+  function up(evt){ if(!state.down) return; evt.preventDefault();
+    if(['line','rect','ellipse'].includes(state.tool)){ commitOverlay(); }
+    state.down = false; clearOverlay(); pushUndo();
+  }
 
-        function isSameColor(color1, color2) {
-            if (!color1 || !color2) return false;
-            return color1[0] === color2[0] && color1[1] === color2[1] && color1[2] === color2[2];
-        }
+  C.addEventListener('touchstart', down, {passive:false});
+  C.addEventListener('touchmove', move, {passive:false});
+  window.addEventListener('touchend', up, {passive:false});
+  C.addEventListener('mousedown', down);
+  C.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', up);
 
-        function hexToRgb(hex) {
-            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : null;
-        }
-        
-        function rgbToHex(rgb) {
-            const toHex = (c) => `0${c.toString(16)}`.slice(-2);
-            return `#${toHex(rgb[0])}${toHex(rgb[1])}${toHex(rgb[2])}`;
-        }
+  // Stroke
+  function drawStroke(p1,p2){
+    ctx.save();
+    ctx.globalAlpha = parseFloat(opacity.value);
+    ctx.strokeStyle = (state.tool==='eraser') ? fillColor.value : strokeColor.value;
+    ctx.lineWidth = parseFloat(size.value);
+    ctx.lineCap = ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(p1[0],p1[1]); ctx.lineTo(p2[0],p2[1]); ctx.stroke();
+    ctx.restore();
+  }
 
-        // Event Listeners for Mouse and Touch
-        canvas.addEventListener('mousedown', handleStart);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', handleEnd);
-        canvas.addEventListener('mouseout', handleEnd);
+  // Shapes overlay
+  function drawOverlay(){ octx.clearRect(0,0,O.width,O.height); octx.save(); octx.globalAlpha = parseFloat(opacity.value); octx.strokeStyle = strokeColor.value; octx.lineWidth = parseFloat(size.value);
+    const [x0,y0]=state.start,[x1,y1]=state.curr; if(state.tool==='line'){ octx.beginPath(); octx.moveTo(x0,y0); octx.lineTo(x1,y1); octx.stroke(); }
+    else if(state.tool==='rect'){ const x=Math.min(x0,x1),y=Math.min(y0,y1),w=Math.abs(x1-x0),h=Math.abs(y1-y0); octx.strokeRect(x,y,w,h); }
+    else if(state.tool==='ellipse'){ const x=Math.min(x0,x1),y=Math.min(y0,y1),w=Math.abs(x1-x0),h=Math.abs(y1-y0); octx.beginPath(); octx.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,2*Math.PI); octx.stroke(); }
+    octx.restore(); }
+  function clearOverlay(){ octx.clearRect(0,0,O.width,O.height); }
+  function commitOverlay(){ ctx.save(); ctx.globalAlpha = parseFloat(opacity.value); ctx.strokeStyle=strokeColor.value; ctx.lineWidth=parseFloat(size.value); const [x0,y0]=state.start,[x1,y1]=state.curr; if(state.tool==='line'){ ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke(); } else if(state.tool==='rect'){ const x=Math.min(x0,x1),y=Math.min(y0,y1),w=Math.abs(x1-x0),h=Math.abs(y1-y0); ctx.strokeRect(x,y,w,h); } else if(state.tool==='ellipse'){ const x=Math.min(x0,x1),y=Math.min(y0,y1),w=Math.abs(x1-x0),h=Math.abs(y1-y0); ctx.beginPath(); ctx.ellipse(x+w/2,y+h/2,w/2,h/2,0,0,2*Math.PI); ctx.stroke(); } ctx.restore(); }
 
-        canvas.addEventListener('touchstart', handleStart);
-        canvas.addEventListener('touchmove', draw);
-        canvas.addEventListener('touchend', handleEnd);
-        
-        function updateColors(color) {
-            colorBoxes.forEach(b => b.classList.remove('active'));
-            currentColor = color;
-            ctx.strokeStyle = currentColor;
-            ctx.fillStyle = currentColor;
-            
-            // Update color picker
-            if (color.startsWith('rgb')) {
-                const rgb = color.match(/\d+/g).map(Number);
-                customColorPicker.value = rgbToHex(rgb);
-            } else {
-                 customColorPicker.value = color;
-            }
+  // Text tool
+  function createTextBox(x,y){
+    const r = C.getBoundingClientRect();
+    const scaleX = r.width / C.width, scaleY = r.height / C.height;
+    const input = document.createElement('textarea');
+    input.className='floating-input'; input.style.left = (r.left + x*scaleX) + 'px'; input.style.top = (r.top + y*scaleY) + 'px';
+    input.rows=1; input.placeholder='Type…'; document.body.appendChild(input); input.focus();
+    function commit(){ const txt=input.value.trim(); if(txt){ ctx.save(); ctx.globalAlpha=parseFloat(opacity.value); ctx.fillStyle=strokeColor.value; ctx.font=(parseInt(size.value)*2)+'px system-ui,sans-serif'; ctx.textBaseline='top'; wrapText(ctx,txt,x,y,C.width-x-10); ctx.restore(); pushUndo(); } input.remove(); }
+    input.addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){ commit(); } else if(e.key==='Escape'){ input.remove(); } });
+    input.addEventListener('blur',commit);
+  }
+  function wrapText(c,txt,x,y,maxW){ const words=txt.split(/\s+/); let line=''; const lh=parseInt(size.value)*2.4; for(let i=0;i<words.length;i++){ const test=line+words[i]+" "; if(c.measureText(test).width>maxW && i>0){ c.fillText(line,x,y); line=words[i]+" "; y+=lh; } else { line=test; } } c.fillText(line,x,y); }
 
-            if (currentTool !== 'eraser') {
-                toolButtons.forEach(b => b.classList.remove('active'));
-                document.getElementById('pencilButton').classList.add('active');
-                currentTool = 'pencil';
-            }
-        }
-        
-        // Color selection from color boxes
-        colorBoxes.forEach(box => {
-            box.addEventListener('click', () => {
-                updateColors(box.dataset.color);
-                box.classList.add('active');
-            });
-        });
-        
-        // Custom color picker
-        customColorPicker.addEventListener('input', (e) => {
-            updateColors(e.target.value);
-        });
+  // Fill (flood)
+  function floodFill(x,y){ const img=ctx.getImageData(0,0,C.width,C.height); const data=img.data; const i0=(y*C.width+x)*4; const sr=data[i0], sg=data[i0+1], sb=data[i0+2], sa=data[i0+3]; const nc=hexToRgb(strokeColor.value);
+    if(sr===nc.r && sg===nc.g && sb===nc.b && sa===255) return; const stack=[[x,y]]; while(stack.length){ const [cx,cy]=stack.pop(); if(cx<0||cy<0||cx>=C.width||cy>=C.height) continue; const i=(cy*C.width+cx)*4; if(data[i]===sr&&data[i+1]===sg&&data[i+2]===sb&&data[i+3]===sa){ data[i]=nc.r; data[i+1]=nc.g; data[i+2]=nc.b; data[i+3]=255; stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]); } } ctx.putImageData(img,0,0); }
+  function hexToRgb(h){ const m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h); return m?{r:parseInt(m[1],16),g:parseInt(m[2],16),b:parseInt(m[3],16)}:{r:0,g:0,b:0}; }
+  function rgbToHex(r,g,b){ return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join(''); }
 
-        // Tool selection
-        toolButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                toolButtons.forEach(b => b.classList.remove('active'));
-                button.classList.add('active');
-                currentTool = button.dataset.tool;
-                
-                if (currentTool === 'eraser') {
-                    ctx.strokeStyle = '#FFFFFF';
-                    ctx.lineWidth = brushSizeSlider.value * 2;
-                } else if (currentTool === 'pencil') {
-                    ctx.strokeStyle = currentColor;
-                    ctx.lineWidth = brushSizeSlider.value;
-                }
-            });
-        });
+  // Undo/Redo
+  function pushUndo(){ try{ undoStack.push(ctx.getImageData(0,0,C.width,C.height)); if(undoStack.length>MAX_STACK) undoStack.shift(); redoStack.length=0; }catch(e){ /* ignore if memory */ } }
+  function undo(){ if(undoStack.length<=1) return; const cur=undoStack.pop(); redoStack.push(cur); const prev=undoStack[undoStack.length-1]; ctx.putImageData(prev,0,0); }
+  function redo(){ if(!redoStack.length) return; const img=redoStack.pop(); undoStack.push(img); ctx.putImageData(img,0,0); }
 
-        // Brush size slider
-        brushSizeSlider.addEventListener('input', (e) => {
-            currentBrushSize = e.target.value;
-            if (currentTool === 'eraser') {
-                 ctx.lineWidth = currentBrushSize * 2;
-            } else {
-                 ctx.lineWidth = currentBrushSize;
-            }
-        });
+  // Clear canvas
+  function clearCanvas(){ if(confirm('Clear the canvas?')){ ctx.fillStyle=fillColor.value; ctx.fillRect(0,0,C.width,C.height); pushUndo(); }}
 
-        // Clear button
-        clearButton.addEventListener('click', () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        });
+  // Buttons
+  btnUndo.onclick=()=>undo();
+  btnRedo.onclick=()=>redo();
+  btnPNG.onclick=()=>{ const a=document.createElement('a'); a.download='drawfun.png'; a.href=C.toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove(); };
+  btnPDF.onclick=()=>{ try{ const { jsPDF } = window.jspdf; const doc=new jsPDF('l','px',[C.width,C.height]); doc.addImage(C.toDataURL('image/jpeg',0.92),'JPEG',0,0,C.width,C.height); doc.save('drawfun.pdf'); }catch(e){ alert('PDF library not loaded. Use PNG save or enable internet.'); } };
+  btnClear.onclick=()=>clearCanvas();
+  btnBgToggle.onclick=()=>checker.classList.toggle('hidden');
+  swapColors.onclick=()=>{ const t=strokeColor.value; strokeColor.value=fillColor.value; fillColor.value=t; };
 
-        // Save PNG button
-        saveButton.addEventListener('click', () => {
-            const dataURL = canvas.toDataURL('image/png');
-            const link = document.createElement('a');
-            link.download = 'my-drawing.png';
-            link.href = dataURL;
-            link.click();
-        });
+  // Import image
+  fileInput.addEventListener('change',ev=>{ const f=ev.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>{ C.width=img.width; C.height=img.height; O.width=C.width; O.height=C.height; fitToScreen(); ctx.fillStyle=fillColor.value; ctx.fillRect(0,0,C.width,C.height); ctx.drawImage(img,0,0); pushUndo(); }; img.src=URL.createObjectURL(f); });
 
-        // Save PDF button
-        pdfButton.addEventListener('click', () => {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF('p', 'px', [canvas.width, canvas.height]);
-            const imgData = canvas.toDataURL('image/png');
-            doc.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-            doc.save('my-drawing.pdf');
-        });
-    </script>
-</body>
+  // Small helpers
+  function flashStatus(msg){ statusEl.textContent = msg; clearTimeout(flashStatus._t); flashStatus._t = setTimeout(()=>statusEl.textContent='Ready', 1200); }
+})();
+</script></body>
 </html>
