@@ -1,911 +1,1338 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>DrawFun — Full (Mobile Ready)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AddMint</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-functions.js"></script>
 
-<!-- jsPDF for PDF export -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-color-main: #1a1a2e;
+            --bg-color-lighter: #16213e;
+            --bg-color-darker: #0d2a4a;
+            --text-color-main: #e0e0e0;
+            --text-color-light: #bbb;
+            --border-color-main: #0f3460;
+            --highlight-color-main: #00ffff;
+            --highlight-color-secondary: #ff00ff;
+            --button-primary-bg: #00ffff;
+            --button-primary-text: #1a1a2e;
+            --error-color: #ff4757;
+            --success-color: #2ed573;
+        }
 
-<style>
-  :root{
-    --bg:#071024; --panel:#0f1a2b; --muted:#9fb0c8; --accent:#4f9cff; --white:#ffffff;
-    --card:#0b1626; --danger:#ef4444;
-  }
-  html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#01040a);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:var(--white)}
-  /* Layout - toolbar bottom on mobile, left on wide screens */
-  .app{height:100vh;display:flex;flex-direction:column;gap:0}
-  .topbar{display:flex;align-items:center;gap:8px;padding:8px;background:var(--panel);border-bottom:1px solid rgba(255,255,255,.04);z-index:40}
-  .title{font-weight:700;margin-left:6px}
-  .main{flex:1;display:flex;overflow:hidden}
-  /* Sidebar for wide screens, collapsed on mobile */
-  .sidebar{width:280px;background:var(--card);padding:10px;overflow:auto;border-right:1px solid rgba(255,255,255,.03)}
-  .canvas-wrap{flex:1;display:flex;align-items:center;justify-content:center;position:relative;background:#061026}
-  .stage{position:relative;border-radius:12px;overflow:visible;box-shadow:0 10px 30px rgba(0,0,0,.6)}
-  canvas{display:block;border-radius:8px;background:#fff;touch-action:none}
-  .toolbar{display:flex;flex-wrap:nowrap;gap:8px;padding:10px;background:var(--panel);align-items:center;border-top:1px solid rgba(255,255,255,.03);position:sticky;bottom:0}
-  .btn{background:transparent;color:var(--white);border:1px solid rgba(255,255,255,.06);padding:8px 10px;border-radius:10px;cursor:pointer;font-weight:600}
-  .btn.primary{background:var(--accent);color:#022; border:0}
-  .btn.warn{background:var(--danger)}
-  .tool-grid{display:flex;flex-wrap:wrap;gap:6px}
-  .tool-btn{width:44px;height:44px;border-radius:8px;background:#0e1626;border:1px solid rgba(255,255,255,.03);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer}
-  .tool-btn.active{outline:2px solid var(--accent);transform:scale(1.03)}
-  .control-row{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}
-  input[type=range]{-webkit-appearance:none;height:6px;background:rgba(255,255,255,.06);border-radius:999px}
-  input[type=color]{width:44px;height:36px;border-radius:8px;border:0;padding:0}
-  .small{font-size:.9rem;color:var(--muted)}
-  .hidden{display:none}
-  /* Mobile adjustments */
-  @media (max-width:900px){
-    .main{flex-direction:column}
-    .sidebar{display:none}
-    .toolbar{position:fixed;left:0;right:0;bottom:0;z-index:60}
-    .canvas-wrap{padding-bottom:72px} /* leave room for fixed toolbar */
-  }
-  /* statusbar footer */
-  .status{padding:8px 12px;background:var(--panel);font-size:.9rem;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
-</style>
+        /* General Styles & Resets */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color-main);
+            color: var(--text-color-main);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 420px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background-color: var(--bg-color-main);
+            border-left: 1px solid var(--border-color-main);
+            border-right: 1px solid var(--border-color-main);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Loading Overlay */
+        #load-status {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(26, 26, 46, 0.9);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .loader {
+            border: 4px solid var(--bg-color-lighter);
+            border-top: 4px solid var(--highlight-color-main);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        #load-status p {
+            color: var(--text-color-main);
+            font-size: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* App Header */
+        .app-header {
+            width: 100%;
+            height: 50px;
+            background-color: var(--bg-color-darker);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        
+        .app-header .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--highlight-color-main);
+            cursor: pointer;
+        }
+
+        .header-actions button {
+            background: none;
+            border: none;
+            color: var(--text-color-main);
+            font-size: 1.5rem;
+            margin-left: 15px;
+            cursor: pointer;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Screens */
+        .screen {
+            padding: 10px;
+        }
+
+        /* Footer Navigation */
+        .app-footer {
+            width: 100%;
+            height: 60px;
+            background-color: var(--bg-color-darker);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .nav-item {
+            background: none;
+            border: none;
+            color: var(--text-color-light);
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 5px;
+            transition: color 0.3s, transform 0.3s;
+        }
+
+        .nav-item.active {
+            color: var(--highlight-color-main);
+            transform: scale(1.1);
+        }
+
+        /* Authentication Screen */
+        #auth-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 20px;
+        }
+
+        .auth-form {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .auth-form h2 {
+            text-align: center;
+            color: var(--highlight-color-main);
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            position: relative;
+        }
+
+        .auth-form input {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--bg-color-lighter);
+            border: 1px solid var(--border-color-main);
+            border-radius: 5px;
+            color: var(--text-color-main);
+            font-size: 1rem;
+        }
+        
+        .auth-form input:focus {
+            outline: none;
+            border-color: var(--highlight-color-main);
+        }
+
+        .auth-btn {
+            padding: 12px;
+            background-color: var(--button-primary-bg);
+            color: var(--button-primary-text);
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        
+        .auth-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .toggle-auth {
+            text-align: center;
+            margin-top: 15px;
+            color: var(--text-color-light);
+        }
+        
+        .toggle-auth span {
+            color: var(--highlight-color-main);
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .auth-message {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .auth-message.error {
+            background-color: var(--error-color);
+            color: white;
+        }
+        
+        .auth-message.success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        /* Post Card */
+        .post-card {
+            background-color: var(--bg-color-lighter);
+            border: 1px solid var(--border-color-main);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            transition: box-shadow 0.3s;
+        }
+        
+        .post-card.neon-glow {
+            animation: neonGlow 0.7s ease-in-out;
+        }
+
+        @keyframes neonGlow {
+            0% { box-shadow: 0 0 5px var(--highlight-color-secondary), 0 0 10px var(--highlight-color-secondary); }
+            100% { box-shadow: 0 0 0px transparent, 0 0 0px transparent; }
+        }
+
+        .post-header {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        .post-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .post-author {
+            font-weight: bold;
+            color: var(--highlight-color-main);
+            cursor: pointer;
+        }
+        
+        .post-content {
+            padding: 0 12px 12px 12px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .post-content strong { font-weight: bold; }
+        .post-content em { font-style: italic; }
+        .post-content a {
+            color: var(--highlight-color-main);
+            text-decoration: none;
+        }
+        
+        .post-content img, .post-content iframe {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .youtube-embed {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 */
+            height: 0;
+            overflow: hidden;
+            max-width: 100%;
+            background: #000;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+
+        .youtube-embed iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .post-actions {
+            display: flex;
+            justify-content: space-around;
+            padding: 8px;
+            border-top: 1px solid var(--border-color-main);
+        }
+
+        .post-actions .action-btn {
+            background: none;
+            border: none;
+            color: var(--text-color-light);
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .post-actions .action-btn .icon.liked {
+            color: red;
+            animation: bounceIn 0.5s;
+        }
+
+        @keyframes bounceIn {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .post-options {
+            position: relative;
+            margin-left: auto;
+        }
+
+        .options-menu {
+            position: absolute;
+            right: 0;
+            top: 30px;
+            background: var(--bg-color-darker);
+            border-radius: 5px;
+            border: 1px solid var(--border-color-main);
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .options-menu button {
+            display: block;
+            width: 100%;
+            padding: 10px 15px;
+            background: none;
+            border: none;
+            color: var(--text-color-main);
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .options-menu button:hover {
+            background: var(--bg-color-lighter);
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--bg-color-lighter);
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            animation: fadeInScale 0.3s ease-out;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: var(--highlight-color-main);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: var(--text-color-light);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .modal-body {
+            overflow-y: auto;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        /* Edit Profile Modal */
+        #edit-profile-modal .input-group {
+            margin-bottom: 15px;
+        }
+        
+        #edit-profile-modal label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-color-light);
+        }
+
+        #edit-profile-modal input, #edit-profile-modal textarea {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--bg-color-darker);
+            border: 1px solid var(--border-color-main);
+            border-radius: 5px;
+            color: var(--text-color-main);
+        }
+
+        #edit-profile-modal textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        #username-status {
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+        
+        .modal-actions {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .modal-btn.primary {
+            background-color: var(--button-primary-bg);
+            color: var(--button-primary-text);
+        }
+
+        .modal-btn.secondary {
+            background-color: var(--bg-color-darker);
+            color: var(--text-color-main);
+        }
+
+        /* Profile Screen */
+        #profile-screen .profile-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            gap: 10px;
+        }
+        
+        #profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--highlight-color-main);
+        }
+        
+        #profile-display-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        #profile-username {
+            color: var(--text-color-light);
+        }
+        
+        #profile-bio {
+            text-align: center;
+            max-width: 90%;
+        }
+        
+        .profile-stats {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            padding: 15px 0;
+            background-color: var(--bg-color-lighter);
+            border-top: 1px solid var(--border-color-main);
+            border-bottom: 1px solid var(--border-color-main);
+        }
+        
+        .stat {
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .stat-count {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .stat-label {
+            color: var(--text-color-light);
+            font-size: 0.9rem;
+        }
+        
+        .profile-actions {
+            padding: 15px;
+        }
+        
+        .profile-btn {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .profile-btn.edit {
+            background-color: var(--bg-color-darker);
+            color: var(--text-color-main);
+            border: 1px solid var(--border-color-main);
+        }
+        
+        .profile-btn.follow {
+            background-color: var(--button-primary-bg);
+            color: var(--button-primary-text);
+        }
+        
+        .profile-btn.unfollow {
+            background-color: var(--bg-color-lighter);
+            color: var(--text-color-main);
+            border: 1px solid var(--text-color-light);
+        }
+        
+        /* Comments Modal */
+        #comments-modal .modal-content {
+            height: 90vh;
+            max-height: 90vh;
+        }
+
+        .comments-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+        
+        .comment-card {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .comment-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .comment-body {
+            background: var(--bg-color-main);
+            padding: 8px 12px;
+            border-radius: 10px;
+            flex-grow: 1;
+        }
+        
+        .comment-username {
+            font-weight: bold;
+            color: var(--highlight-color-secondary);
+            font-size: 0.9rem;
+        }
+
+        .comment-content {
+            font-size: 0.95rem;
+        }
+        
+        .comment-form {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .comment-form textarea {
+            flex-grow: 1;
+            resize: none;
+            padding: 10px;
+            background-color: var(--bg-color-darker);
+            border: 1px solid var(--border-color-main);
+            border-radius: 20px;
+            color: var(--text-color-main);
+            height: 40px;
+        }
+
+        .comment-form button {
+            padding: 0 15px;
+            border-radius: 20px;
+            border: none;
+            background-color: var(--button-primary-bg);
+            color: var(--button-primary-text);
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+    </style>
 </head>
 <body>
-<div class="app" id="app">
-  <div class="topbar">
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn" id="toggleSidebar">☰</button>
-      <div class="title">🎨 DrawFun</div>
+
+    <div id="app-container">
+        <!-- Full Screen Loader -->
+        <div id="load-status">
+            <div class="loader"></div>
+            <p>Initializing AddMint...</p>
+        </div>
+
+        <!-- Authentication Container (shown when logged out) -->
+        <div id="auth-container" class="hidden">
+            <!-- Login Form -->
+            <div id="login-form" class="auth-form">
+                <h2>Login to AddMint</h2>
+                <div id="login-message" class="auth-message hidden"></div>
+                <div class="input-group">
+                    <input type="email" id="login-email" placeholder="Email" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="login-password" placeholder="Password" required>
+                </div>
+                <button id="login-btn" class="auth-btn">Login</button>
+                <p class="toggle-auth">No account? <span id="show-signup">Sign Up</span></p>
+            </div>
+
+            <!-- Sign Up Form -->
+            <div id="signup-form" class="auth-form hidden">
+                <h2>Create Account</h2>
+                <div id="signup-message" class="auth-message hidden"></div>
+                <div class="input-group">
+                    <input type="email" id="signup-email" placeholder="Email" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="signup-password" placeholder="Password (min. 6 characters)" required>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="signup-confirm-password" placeholder="Confirm Password" required>
+                </div>
+                <button id="signup-btn" class="auth-btn">Sign Up</button>
+                <p class="toggle-auth">Have an account? <span id="show-login">Login</span></p>
+            </div>
+        </div>
+
+        <!-- Main App Content (shown when logged in) -->
+        <div id="main-app" class="hidden">
+            <header class="app-header">
+                <div class="logo">AddMint</div>
+                <div class="header-actions">
+                    <button id="refresh-feed-btn">🔄</button>
+                    <button id="logout-btn">🚪</button>
+                </div>
+            </header>
+            
+            <main class="main-content">
+                <!-- Home Screen -->
+                <div id="home-screen" class="screen">
+                    <!-- Posts will be injected here -->
+                </div>
+                
+                <!-- Profile Screen -->
+                <div id="profile-screen" class="screen hidden">
+                    <div class="profile-header">
+                        <img id="profile-avatar" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Profile Avatar">
+                        <h2 id="profile-display-name"></h2>
+                        <p id="profile-username"></p>
+                        <p id="profile-bio"></p>
+                    </div>
+                    <div class="profile-stats">
+                        <div class="stat" id="profile-posts-stat">
+                            <div id="profile-post-count" class="stat-count">0</div>
+                            <div class="stat-label">Posts</div>
+                        </div>
+                        <div class="stat" id="profile-followers-stat">
+                            <div id="profile-followers-count" class="stat-count">0</div>
+                            <div class="stat-label">Followers</div>
+                        </div>
+                        <div class="stat" id="profile-following-stat">
+                            <div id="profile-following-count" class="stat-count">0</div>
+                            <div class="stat-label">Following</div>
+                        </div>
+                    </div>
+                    <div class="profile-actions">
+                        <button id="profile-main-btn" class="profile-btn"></button>
+                    </div>
+                    <div id="profile-posts-feed" class="posts-feed">
+                        <!-- User's posts will be injected here -->
+                    </div>
+                </div>
+                
+                <!-- Monetization Screen -->
+                <div id="monetization-screen" class="screen hidden">
+                    <h3>Monetization</h3>
+                    <!-- Content here -->
+                </div>
+                
+                <!-- Notifications Screen -->
+                <div id="notifications-screen" class="screen hidden">
+                    <h3>Notifications</h3>
+                    <!-- Content here -->
+                </div>
+            </main>
+
+            <footer class="app-footer">
+                <button class="nav-item active" data-screen="home-screen">🏠</button>
+                <button class="nav-item" data-screen="monetization-screen">💰</button>
+                <button class="nav-item" data-screen="notifications-screen">🔔</button>
+                <button class="nav-item" id="nav-profile-btn">👤</button>
+            </footer>
+        </div>
+
+        <!-- Modals -->
+        <div id="edit-profile-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Profile</h3>
+                    <button id="edit-profile-close-btn" class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <label for="edit-username">Username</label>
+                        <input type="text" id="edit-username" placeholder="Unique username (no spaces)">
+                        <p id="username-status"></p>
+                    </div>
+                    <div class="input-group">
+                        <label for="edit-display-name">Display Name</label>
+                        <input type="text" id="edit-display-name" placeholder="Your display name">
+                    </div>
+                    <div class="input-group">
+                        <label for="edit-bio">Bio</label>
+                        <textarea id="edit-bio" maxlength="150" placeholder="Tell us about yourself"></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label for="edit-avatar-url">Profile Picture URL</label>
+                        <input type="text" id="edit-avatar-url" placeholder="https://example.com/image.png">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="edit-profile-cancel-btn" class="modal-btn secondary">Cancel</button>
+                    <button id="edit-profile-save-btn" class="modal-btn primary">Save</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="comments-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Comments</h3>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="comments-list">
+                    <!-- Comments will be injected here -->
+                </div>
+                <form class="comment-form" id="comment-form">
+                    <textarea id="comment-input" placeholder="Add a comment..." maxlength="100"></textarea>
+                    <button type="submit">Post</button>
+                </form>
+            </div>
+        </div>
+
     </div>
-    <div style="flex:1"></div>
-    <div class="small">Heavy version • Mobile optimized</div>
-  </div>
 
-  <div class="main">
-    <aside class="sidebar" id="sidebar">
-      <div class="control-row">
-        <div style="font-weight:700">Tools</div>
-        <div style="flex:1"></div>
-      </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- START: Firebase Configuration ---
+        // IMPORTANT: REPLACE WITH YOUR FIREBASE PROJECT CONFIGURATION
+        const firebaseConfig = {
+            apiKey: "AIzaSyDlZA4grzF3fx95-11E4s7ASXwkIij1k1w",
+            authDomain: "addmint-7ab6b.firebaseapp.com",
+            projectId: "addmint-7ab6b",
+            storageBucket: "addmint-7ab6b.firebasestorage.app",
+            messagingSenderId: "504015450137",
+            appId: "1:504015450137:web:694b176313582cce1e7a88",
+        };
 
-      <div class="tool-grid" id="toolGrid">
-        <div class="tool-btn active" data-tool="brush" title="Brush">🖌</div>
-        <div class="tool-btn" data-tool="pencil" title="Pencil">✏️</div>
-        <div class="tool-btn" data-tool="eraser" title="Eraser">🧽</div>
-        <div class="tool-btn" data-tool="line" title="Line">／</div>
-        <div class="tool-btn" data-tool="rect" title="Rectangle">▭</div>
-        <div class="tool-btn" data-tool="ellipse" title="Ellipse">◯</div>
-        <div class="tool-btn" data-tool="bucket" title="Fill">🪣</div>
-        <div class="tool-btn" data-tool="picker" title="Eyedropper">🎯</div>
-        <div class="tool-btn" data-tool="text" title="Text">A</div>
-        <div class="tool-btn" data-tool="spray" title="Airbrush">🧴</div>
-        <div class="tool-btn" data-tool="poly" title="Polygon">⬖</div>
-      </div>
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const functions = firebase.functions();
+        // --- END: Firebase Configuration ---
 
-      <hr style="border:0;height:8px">
 
-      <div class="control-row">
-        <div class="small">Brush size</div>
-        <input id="size" type="range" min="1" max="120" value="12">
-      </div>
-      <div class="control-row">
-        <div class="small">Opacity</div>
-        <input id="opacity" type="range" min="0.1" max="1" step="0.05" value="1">
-      </div>
-      <div class="control-row">
-        <div class="small">Stroke Mode</div>
-        <select id="strokeMode">
-          <option value="both">Both</option>
-          <option value="stroke">Outline</option>
-          <option value="fill">Fill</option>
-        </select>
-      </div>
+        // --- START: Global State & Element Selectors ---
+        let currentUser = null;
+        let lastVisiblePost = null;
+        let isFetchingPosts = false;
+        
+        const loader = document.getElementById('load-status');
+        const authContainer = document.getElementById('auth-container');
+        const mainApp = document.getElementById('main-app');
+        
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
 
-      <hr style="border:0;height:8px">
+        const homeScreen = document.getElementById('home-screen');
+        const profileScreen = document.getElementById('profile-screen');
+        // Add other screen selectors here...
 
-      <div class="control-row">
-        <div class="small">Primary</div>
-        <input id="color1" type="color" value="#000000">
-        <div style="width:8px"></div>
-        <div class="small">Secondary</div>
-        <input id="color2" type="color" value="#ffffff">
-        <button class="btn" id="swap">⇄</button>
-      </div>
+        const editProfileModal = document.getElementById('edit-profile-modal');
+        const commentsModal = document.getElementById('comments-modal');
+        // --- END: Global State & Element Selectors ---
 
-      <div class="control-row small">Palette: tap to set primary, long-press / right-click to set secondary</div>
-      <div id="palette" class="control-row" style="gap:6px;flex-wrap:wrap"></div>
+        
+        // --- START: Authentication Logic ---
+        auth.onAuthStateChanged(async user => {
+            loader.classList.remove('hidden');
+            if (user) {
+                if (user.emailVerified) {
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    if (userDoc.exists) {
+                        currentUser = { uid: user.uid, ...userDoc.data() };
+                        if (!currentUser.username) {
+                           // First time login: force profile setup
+                           showEditProfileModal(true);
+                        } else {
+                           initializeAppUI();
+                        }
+                    } else {
+                        // Create user profile document if it doesn't exist
+                        await setupNewUser(user);
+                        showEditProfileModal(true); // Force setup
+                    }
+                } else {
+                    // User's email is not verified
+                    currentUser = null;
+                    showAuthScreen();
+                    displayAuthMessage('login-message', 'Please verify your email before logging in. A new verification link has been sent.', 'error');
+                    user.sendEmailVerification(); // Resend verification
+                    auth.signOut();
+                }
+            } else {
+                // User is signed out
+                currentUser = null;
+                showAuthScreen();
+            }
+        });
 
-      <hr style="border:0;height:8px">
-
-      <div class="control-row">
-        <div class="small">Canvas W</div>
-        <input id="cw" type="number" value="1200" style="width:90px">
-        <div class="small">H</div>
-        <input id="ch" type="number" value="800" style="width:90px">
-        <button class="btn" id="resize">Resize</button>
-      </div>
-
-      <div class="control-row">
-        <button class="btn" id="clear">Clear</button>
-        <button class="btn" id="importBtn">Import</button>
-        <input id="fileInput" type="file" accept="image/*" class="hidden">
-      </div>
-
-      <div class="control-row">
-        <label class="small">Zoom</label>
-        <input id="zoom" type="range" min="25" max="400" value="100">
-        <span id="zoomLbl" class="small">100%</span>
-      </div>
-
-      <div class="control-row">
-        <button class="btn" id="grid">Grid</button>
-        <button class="btn" id="checker">Checker</button>
-      </div>
-
-      <div style="height:18px"></div>
-      <div class="small">Shortcuts: B Brush · E Eraser · G Fill · T Text · L Line · R Rect · O Ellipse</div>
-    </aside>
-
-    <div class="canvas-wrap">
-      <div class="stage" id="stageWrap">
-        <canvas id="canvas"></canvas>
-        <canvas id="overlay" style="position:absolute;left:0;top:0;pointer-events:none"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="toolbar" id="toolbar">
-    <div style="display:flex;gap:8px;flex:1;align-items:center">
-      <button class="btn" id="btnNew">🆕 New</button>
-      <button class="btn" id="btnUndo">↶ Undo</button>
-      <button class="btn" id="btnRedo">↷ Redo</button>
-      <button class="btn" id="btnCopy">📋 Copy</button>
-      <button class="btn" id="btnCut">✂ Cut</button>
-      <button class="btn" id="btnPaste">📌 Paste</button>
-      <button class="btn" id="btnCrop">✂ Crop</button>
-    </div>
-
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn" id="btnRotL">⟲</button>
-      <button class="btn" id="btnRotR">⟳</button>
-      <button class="btn" id="btnFlipH">⇋</button>
-      <button class="btn" id="btnFlipV">⇅</button>
-
-      <button class="btn primary" id="btnSavePng">💾 Save PNG</button>
-      <button class="btn" id="btnSavePdf">📄 Save PDF</button>
-    </div>
-  </div>
-
-  <div class="status" id="status">
-    <div id="statusL">Ready</div>
-    <div id="statusR">0,0 • 100%</div>
-  </div>
-</div>
-
-<script>
-/* --------- Responsive heavy DrawFun logic --------- */
-/* Author: DrawFun helper code. Save as single HTML and host. */
-
-(() => {
-  // Elements
-  const canvas = document.getElementById('canvas');
-  const overlay = document.getElementById('overlay');
-  const stageWrap = document.getElementById('stageWrap');
-  const statusL = document.getElementById('statusL');
-  const statusR = document.getElementById('statusR');
-
-  const toolGrid = document.getElementById('toolGrid');
-  const sizeEl = document.getElementById('size');
-  const opacityEl = document.getElementById('opacity');
-  const strokeMode = document.getElementById('strokeMode');
-  const color1 = document.getElementById('color1');
-  const color2 = document.getElementById('color2');
-  const swapBtn = document.getElementById('swap');
-  const paletteEl = document.getElementById('palette');
-
-  const cw = document.getElementById('cw');
-  const ch = document.getElementById('ch');
-  const resizeBtn = document.getElementById('resize');
-  const clearBtn = document.getElementById('clear');
-  const fileInput = document.getElementById('fileInput');
-  const importBtn = document.getElementById('importBtn');
-  const zoomEl = document.getElementById('zoom');
-  const zoomLbl = document.getElementById('zoomLbl');
-
-  const gridBtn = document.getElementById('grid');
-  const checkerBtn = document.getElementById('checker');
-
-  const btnNew = document.getElementById('btnNew');
-  const btnUndo = document.getElementById('btnUndo');
-  const btnRedo = document.getElementById('btnRedo');
-  const btnCopy = document.getElementById('btnCopy');
-  const btnCut = document.getElementById('btnCut');
-  const btnPaste = document.getElementById('btnPaste');
-  const btnCrop = document.getElementById('btnCrop');
-  const btnRotL = document.getElementById('btnRotL');
-  const btnRotR = document.getElementById('btnRotR');
-  const btnFlipH = document.getElementById('btnFlipH');
-  const btnFlipV = document.getElementById('btnFlipV');
-
-  const btnSavePng = document.getElementById('btnSavePng');
-  const btnSavePdf = document.getElementById('btnSavePdf');
-
-  const toggleSidebar = document.getElementById('toggleSidebar');
-  const sidebar = document.getElementById('sidebar');
-
-  // Canvas contexts
-  const ctx = canvas.getContext('2d', { alpha: false });
-  const octx = overlay.getContext('2d');
-
-  // State
-  let DPR = Math.max(1, window.devicePixelRatio || 1);
-  let appState = {
-    tool: 'brush',
-    drawing: false,
-    start: [0,0],
-    curr: [0,0],
-    zoom: 1,
-    selection: null,
-    polyPoints: [],
-    clipboard: null
-  };
-
-  // Undo/Redo
-  const undoStack = [];
-  const redoStack = [];
-  const MAX_UNDO = 40;
-
-  // Init sizes: canvas will size to viewport minus toolbars
-  function computeCanvasPixelSize() {
-    // Attempt to use cw/ch inputs as 'logical canvas pixels' while scaling for DPR.
-    const logicalW = Math.max(100, parseInt(cw.value) || 1200);
-    const logicalH = Math.max(100, parseInt(ch.value) || 800);
-    return { logicalW, logicalH, realW: Math.round(logicalW * DPR), realH: Math.round(logicalH * DPR) };
-  }
-
-  function resizeCanvasTo(logicalW, logicalH) {
-    DPR = Math.max(1, window.devicePixelRatio || 1);
-    canvas.width = Math.round(logicalW * DPR);
-    canvas.height = Math.round(logicalH * DPR);
-    overlay.width = canvas.width;
-    overlay.height = canvas.height;
-    canvas.style.width = Math.min(window.innerWidth - 16, logicalW * appState.zoom) + 'px';
-    canvas.style.height = Math.min(window.innerHeight - 140, logicalH * appState.zoom) + 'px';
-    overlay.style.width = canvas.style.width;
-    overlay.style.height = canvas.style.height;
-    ctx.setTransform(DPR,0,0,DPR,0,0); // keep drawing coordinates in logical pixels
-    octx.setTransform(DPR,0,0,DPR,0,0);
-  }
-
-  // Initialize with cw/ch values
-  (function initCanvas(){
-    const { logicalW, logicalH } = computeCanvasPixelSize();
-    resizeCanvasTo(logicalW, logicalH);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0,0, canvas.width / DPR, canvas.height / DPR);
-    pushUndo();
-    updateStatus('Ready');
-  })();
-
-  // Palette
-  function buildPalette(){
-    const colors = ['#000000','#7f1d1d','#ef4444','#f97316','#f59e0b','#facc15','#22c55e','#06b6d4','#3b82f6','#6366f1','#8b5cf6','#ec4899','#ffffff','#9ca3af'];
-    paletteEl.innerHTML = '';
-    colors.forEach(c => {
-      const b = document.createElement('button');
-      b.className = 'btn';
-      b.style.background = c;
-      b.title = c;
-      b.style.width = '36px';
-      b.style.height = '36px';
-      b.style.padding = '0';
-      b.style.borderRadius = '8px';
-      b.addEventListener('click', ()=> { color1.value = toHex(c); });
-      b.addEventListener('contextmenu', (ev)=> { ev.preventDefault(); color2.value = toHex(c); });
-      paletteEl.appendChild(b);
-    });
-  }
-  buildPalette();
-
-  // Tool selection
-  toolGrid.addEventListener('click', e => {
-    const t = e.target.closest('.tool-btn');
-    if (!t) return;
-    [...toolGrid.children].forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-    appState.tool = t.dataset.tool;
-    appState.polyPoints = [];
-    updateStatus('Tool: ' + appState.tool);
-  });
-
-  // Utilities
-  function toHex(v){
-    // normalize either '#rrggbb' or rgb(...)
-    const ctx2 = document.createElement('canvas').getContext('2d');
-    ctx2.fillStyle = v;
-    return ctx2.fillStyle;
-  }
-  function updateStatus(left, right){
-    if (left) statusL.textContent = left;
-    if (right) statusR.textContent = right;
-    if (!left && !right) statusL.textContent = 'Ready';
-  }
-
-  // Mouse/Touch coordinate helper (logical coords)
-  function getPosFromEvent(evt){
-    const rect = canvas.getBoundingClientRect();
-    const touch = evt.touches ? evt.touches[0] : evt;
-    const x = (touch.clientX - rect.left) / (rect.width / (canvas.width / DPR));
-    const y = (touch.clientY - rect.top) / (rect.height / (canvas.height / DPR));
-    return [x, y];
-  }
-
-  // Drawing primitives
-  function strokeLine(p1, p2, color, width, mode='stroke'){
-    ctx.save();
-    ctx.globalAlpha = parseFloat(opacityEl.value || 1);
-    if (mode === 'fill') {
-      // draw thick line as thicker stroke fill
-      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.stroke();
-    } else {
-      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  // Freehand: smooth between points
-  function drawSmoothLine(points, color, width){
-    if (points.length < 2) return;
-    ctx.save();
-    ctx.globalAlpha = parseFloat(opacityEl.value || 1);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = width;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(points[0][0], points[0][1]);
-    for (let i=1;i<points.length;i++){
-      const midx = (points[i-1][0] + points[i][0]) / 2;
-      const midy = (points[i-1][1] + points[i][1]) / 2;
-      ctx.quadraticCurveTo(points[i-1][0], points[i-1][1], midx, midy);
-    }
-    ctx.lineTo(points[points.length-1][0], points[points.length-1][1]);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Flood fill (stack-based)
-  function floodFill(x, y, fillHex){
-    const w = canvas.width / DPR, h = canvas.height / DPR;
-    const img = ctx.getImageData(0,0,w,h);
-    const data = img.data;
-    const startIdx = ((Math.floor(y) * w) + Math.floor(x)) * 4;
-    const targetR = data[startIdx], targetG = data[startIdx+1], targetB = data[startIdx+2], targetA = data[startIdx+3];
-    const nc = hexToRgb(fillHex);
-    if (targetR === nc.r && targetG === nc.g && targetB === nc.b) return;
-    const stack = [[Math.floor(x), Math.floor(y)]];
-    while (stack.length){
-      const [cx,cy] = stack.pop();
-      if (cx<0||cy<0||cx>=w||cy>=h) continue;
-      const idx = ((cy * w) + cx) * 4;
-      if (data[idx]===targetR && data[idx+1]===targetG && data[idx+2]===targetB){
-        data[idx]=nc.r; data[idx+1]=nc.g; data[idx+2]=nc.b; data[idx+3]=255;
-        stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
-      }
-    }
-    ctx.putImageData(img,0,0);
-  }
-
-  function hexToRgb(hex) {
-    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return m ? { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) } : {r:0,g:0,b:0};
-  }
-
-  function rgbToHex(r,g,b){ return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
-
-  // Text input
-  function showTextInput(x, y){
-    const el = document.createElement('textarea');
-    el.style.position = 'absolute';
-    el.style.left = (x * (canvas.getBoundingClientRect().width / (canvas.width / DPR))) + 'px';
-    el.style.top = (y * (canvas.getBoundingClientRect().height / (canvas.height / DPR))) + 'px';
-    el.style.zIndex = 9999;
-    el.style.padding = '6px';
-    el.style.borderRadius = '8px';
-    el.style.border = '1px solid rgba(0,0,0,.2)';
-    el.style.fontSize = '18px';
-    document.body.appendChild(el);
-    el.focus();
-    function commit(){
-      const text = el.value;
-      if (text){
-        ctx.save();
-        ctx.globalAlpha = parseFloat(opacityEl.value || 1);
-        ctx.fillStyle = color1.value;
-        ctx.font = (parseInt(sizeEl.value)*1.8) + 'px Arial';
-        ctx.textBaseline = 'top';
-        wrapText(ctx, text, x, y, canvas.width / DPR - x);
-        ctx.restore();
-        pushUndo();
-      }
-      el.remove();
-    }
-    el.addEventListener('blur', commit);
-    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey||e.metaKey)) { commit(); } if (e.key==='Escape') el.remove(); });
-  }
-
-  function wrapText(c, text, x, y, maxW){
-    const words = text.split(/\s+/);
-    let line = '';
-    const lh = parseInt(sizeEl.value)*1.8;
-    for (let n=0;n<words.length;n++){
-      const test = line + words[n] + ' ';
-      const w = c.measureText(test).width;
-      if (w > maxW && n>0){
-        c.fillText(line, x, y);
-        line = words[n] + ' ';
-        y += lh;
-      } else {
-        line = test;
-      }
-    }
-    c.fillText(line, x, y);
-  }
-
-  // Undo/Redo
-  function pushUndo(){
-    try {
-      const snap = ctx.getImageData(0,0, canvas.width / DPR, canvas.height / DPR);
-      undoStack.push(snap);
-      if (undoStack.length > MAX_UNDO) undoStack.shift();
-      redoStack.length = 0;
-      updateStatus('Saved');
-    } catch(e) {
-      console.warn('pushUndo failed', e);
-    }
-  }
-  function doUndo(){
-    if (undoStack.length < 2) return;
-    const cur = undoStack.pop();
-    redoStack.push(cur);
-    const prev = undoStack[undoStack.length-1];
-    ctx.putImageData(prev, 0, 0);
-    updateStatus('Undo');
-  }
-  function doRedo(){
-    if (!redoStack.length) return;
-    const img = redoStack.pop();
-    undoStack.push(img);
-    ctx.putImageData(img, 0, 0);
-    updateStatus('Redo');
-  }
-
-  // Clear
-  clearBtn.addEventListener('click', ()=>{
-    if (!confirm('Clear canvas?')) return;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0,0, canvas.width / DPR, canvas.height / DPR);
-    pushUndo();
-  });
-
-  // Import image
-  importBtn.addEventListener('click', ()=> fileInput.click());
-  fileInput.addEventListener('change', e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    const img = new Image();
-    img.onload = () => {
-      canvas.width = img.width * DPR; canvas.height = img.height * DPR;
-      resizeCanvasTo(img.width, img.height);
-      ctx.drawImage(img,0,0, img.width, img.height);
-      cw.value = img.width; ch.value = img.height;
-      pushUndo();
-    };
-    img.src = URL.createObjectURL(f);
-    fileInput.value = '';
-  });
-
-  // Resize canvas using cw/ch
-  resizeBtn.addEventListener('click', ()=>{
-    const lw = Math.max(64, parseInt(cw.value)||1200);
-    const lh = Math.max(64, parseInt(ch.value)||800);
-    // scale existing content into new canvas
-    const tmp = document.createElement('canvas');
-    tmp.width = canvas.width; tmp.height = canvas.height;
-    tmp.getContext('2d').drawImage(canvas,0,0);
-    resizeCanvasTo(lw, lh);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0, lw, lh);
-    ctx.drawImage(tmp, 0, 0, tmp.width / DPR, tmp.height / DPR, 0,0, lw, lh);
-    pushUndo();
-  });
-
-  // Zoom control (scales CSS dimensions only)
-  zoomEl.addEventListener('input', ()=>{
-    const z = parseInt(zoomEl.value) / 100;
-    appState.zoom = z;
-    const logicalW = canvas.width / DPR;
-    const logicalH = canvas.height / DPR;
-    canvas.style.width = Math.min(window.innerWidth - 16, logicalW * z) + 'px';
-    canvas.style.height = Math.min(window.innerHeight - 140, logicalH * z) + 'px';
-    overlay.style.width = canvas.style.width;
-    overlay.style.height = canvas.style.height;
-    zoomLbl.textContent = Math.round(z*100) + '%';
-  });
-
-  // Grid / checker
-  let gridOn = false;
-  gridBtn.addEventListener('click', ()=> {
-    gridOn = !gridOn;
-    drawOverlayGrid();
-  });
-  let checkerOn = false;
-  checkerBtn.addEventListener('click', ()=> {
-    checkerOn = !checkerOn;
-    if (checkerOn) stageWrap.style.backgroundImage = 'linear-gradient(45deg,#eee 25%, transparent 25%), linear-gradient(-45deg,#eee 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #eee 75%), linear-gradient(-45deg, transparent 75%, #eee 75%)', stageWrap.style.backgroundSize='24px 24px', stageWrap.style.backgroundPosition='0 0, 0 12px, 12px -12px, -12px 0';
-    else stageWrap.style.backgroundImage = '';
-  });
-
-  function drawOverlayGrid(){
-    octx.clearRect(0,0, overlay.width / DPR, overlay.height / DPR);
-    if (!gridOn) return;
-    const step = 32;
-    octx.save();
-    octx.strokeStyle = 'rgba(0,0,0,0.08)';
-    octx.lineWidth = 1;
-    for (let x=0; x < canvas.width / DPR; x += step){
-      octx.beginPath(); octx.moveTo(x + .5, 0); octx.lineTo(x + .5, canvas.height / DPR); octx.stroke();
-    }
-    for (let y=0; y < canvas.height / DPR; y += step){
-      octx.beginPath(); octx.moveTo(0, y + .5); octx.lineTo(canvas.width / DPR, y + .5); octx.stroke();
-    }
-    octx.restore();
-  }
-
-  // Drawing handlers (touch + mouse)
-  let pointerId = null;
-  let points = [];
-
-  function startDraw(e){
-    e.preventDefault();
-    const p = getPosFromEvent(e);
-    appState.drawing = true;
-    appState.start = p;
-    appState.curr = p;
-    points = [p.slice()];
-    if (appState.tool === 'bucket'){
-      floodFill(p[0], p[1], color1.value);
-      pushUndo();
-      appState.drawing = false;
-      return;
-    } else if (appState.tool === 'picker'){
-      const px = ctx.getImageData(Math.floor(p[0]), Math.floor(p[1]), 1,1).data;
-      color1.value = rgbToHex(px[0],px[1],px[2]);
-      appState.drawing = false;
-      return;
-    } else if (appState.tool === 'text'){
-      showTextInput(p[0], p[1]);
-      appState.drawing = false;
-      return;
-    } else if (appState.tool === 'poly'){
-      appState.polyPoints.push(p.slice());
-      if (appState.polyPoints.length > 1){
-        strokeLine(appState.polyPoints[appState.polyPoints.length-2], appState.polyPoints[appState.polyPoints.length-1], color1.value, parseInt(sizeEl.value), strokeMode.value);
-        pushUndo();
-      }
-      appState.drawing = false;
-      return;
-    }
-    // for freehand start, nothing drawn until move except single dot if no move
-  }
-
-  function moveDraw(e){
-    if (!appState.drawing) {
-      // preview cursor
-      const p = getPosFromEvent(e);
-      statusR.textContent = `${Math.round(p[0])},${Math.round(p[1])} • ${Math.round(appState.zoom*100)}%`;
-      // cursor preview
-      drawCursorPreview(p);
-      return;
-    }
-    const p = getPosFromEvent(e);
-    appState.curr = p;
-    if (['brush','pencil','eraser','spray'].includes(appState.tool)){
-      const col = appState.tool === 'eraser' ? '#ffffff' : color1.value;
-      if (appState.tool === 'spray'){
-        // spray many dots
-        const density = 30;
-        const r = parseInt(sizeEl.value) / 2;
-        for (let i=0;i<density;i++){
-          const a = Math.random()*Math.PI*2;
-          const rr = Math.random()*r;
-          const x = Math.round(p[0] + Math.cos(a)*rr);
-          const y = Math.round(p[1] + Math.sin(a)*rr);
-          ctx.fillStyle = col; ctx.globalAlpha = parseFloat(opacityEl.value);
-          ctx.fillRect(x, y, 1, 1);
+        async function setupNewUser(user) {
+            const newUser = {
+                uid: user.uid,
+                email: user.email,
+                username: null,
+                name: "New User",
+                bio: "",
+                profilePicUrl: `https://avatar.iran.liara.run/public/boy?username=${user.uid}`,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                postCount: 0,
+                totalMonetizedViews: 0,
+                followers: [],
+                following: [],
+                followersCount: 0,
+                followingCount: 0,
+            };
+            await db.collection('users').doc(user.uid).set(newUser);
+            currentUser = newUser;
         }
-      } else {
-        points.push(p.slice());
-        drawSmoothLine(points, col, parseFloat(sizeEl.value));
-      }
-    } else if (['line','rect','ellipse','roundrect'].includes(appState.tool)){
-      drawShapePreview();
-    }
-  }
 
-  function endDraw(e){
-    if (!appState.drawing) return;
-    appState.drawing = false;
-    const p = appState.curr;
-    if (['brush','pencil','eraser','spray'].includes(appState.tool)){
-      pushUndo();
-      points = [];
-    } else if (appState.tool === 'line'){
-      strokeLine(appState.start, p, color1.value, parseInt(sizeEl.value), strokeMode.value);
-      pushUndo();
-    } else if (appState.tool === 'rect' || appState.tool === 'roundrect' || appState.tool === 'ellipse'){
-      commitShape(appState.start, p);
-      pushUndo();
-    }
-    clearOverlayCanvas();
-  }
+        document.getElementById('signup-btn').addEventListener('click', async () => {
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
 
-  // preview cursor on overlay
-  function drawCursorPreview(p){
-    octx.clearRect(0,0, overlay.width / DPR, overlay.height / DPR);
-    octx.save();
-    octx.globalAlpha = 0.7;
-    octx.strokeStyle = '#000';
-    octx.beginPath();
-    octx.arc(p[0], p[1], Math.max(6, parseFloat(sizeEl.value)/2), 0, Math.PI*2); octx.stroke();
-    octx.restore();
-    if (gridOn) drawOverlayGrid();
-  }
-  function clearOverlayCanvas(){ octx.clearRect(0,0, overlay.width / DPR, overlay.height / DPR); if (gridOn) drawOverlayGrid(); }
+            if (password !== confirmPassword) {
+                displayAuthMessage('signup-message', 'Passwords do not match.', 'error');
+                return;
+            }
 
-  // Shape preview & commit
-  function drawShapePreview(){
-    clearOverlayCanvas();
-    const [x0,y0] = appState.start;
-    const [x1,y1] = appState.curr;
-    const x = Math.min(x0,x1), y = Math.min(y0,y1), w = Math.abs(x1-x0), h = Math.abs(y1-y0);
-    octx.save();
-    octx.strokeStyle = color1.value; octx.lineWidth = parseFloat(sizeEl.value);
-    if (appState.tool === 'line'){
-      octx.beginPath(); octx.moveTo(x0,y0); octx.lineTo(x1,y1); octx.stroke();
-    } else if (appState.tool === 'rect' || appState.tool === 'roundrect'){
-      if (strokeMode.value !== 'stroke') { octx.fillStyle = hexWithAlpha(color1.value, opacityEl.value); if (appState.tool === 'roundrect') roundRect(octx, x,y,w,h, Math.min(20, Math.min(w,h)/4), true, false); else octx.fillRect(x,y,w,h); }
-      if (strokeMode.value !== 'fill') { octx.strokeStyle = color1.value; if (appState.tool === 'roundrect') roundRect(octx, x,y,w,h, Math.min(20, Math.min(w,h)/4), false, true); else octx.strokeRect(x,y,w,h); }
-    } else if (appState.tool === 'ellipse'){
-      octx.beginPath(); octx.ellipse(x+w/2, y+h/2, w/2, h/2, 0,0,Math.PI*2);
-      if (strokeMode.value !== 'stroke') { octx.fillStyle = hexWithAlpha(color1.value, opacityEl.value); octx.fill(); }
-      if (strokeMode.value !== 'fill') octx.stroke();
-    }
-    octx.restore();
-    if (gridOn) drawOverlayGrid();
-  }
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                await userCredential.user.sendEmailVerification();
+                await setupNewUser(userCredential.user);
+                auth.signOut();
+                displayAuthMessage('signup-message', 'Account created! Please check your email to verify your account before logging in.', 'success');
+                toggleAuthForms();
+            } catch (error) {
+                displayAuthMessage('signup-message', error.message, 'error');
+            }
+        });
 
-  function commitShape(p0, p1){
-    const [x0,y0] = p0; const [x1,y1] = p1;
-    const x = Math.min(x0,x1), y = Math.min(y0,y1), w = Math.abs(x1-x0), h = Math.abs(y1-y0);
-    ctx.save();
-    ctx.globalAlpha = parseFloat(opacityEl.value);
-    if (appState.tool === 'line') {
-      ctx.strokeStyle = color1.value; ctx.lineWidth = parseFloat(sizeEl.value);
-      ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
-    } else if (appState.tool === 'rect' || appState.tool === 'roundrect') {
-      if (strokeMode.value !== 'stroke') { ctx.fillStyle = color1.value; if (appState.tool === 'roundrect') roundRect(ctx, x,y,w,h, Math.min(20, Math.min(w,h)/4), true, false); else ctx.fillRect(x,y,w,h); }
-      if (strokeMode.value !== 'fill') { ctx.strokeStyle = color1.value; ctx.lineWidth = parseFloat(sizeEl.value); if (appState.tool === 'roundrect') roundRect(ctx, x,y,w,h, Math.min(20, Math.min(w,h)/4), false, true); else ctx.strokeRect(x,y,w,h); }
-    } else if (appState.tool === 'ellipse') {
-      ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2, w/2, h/2, 0,0,Math.PI*2);
-      if (strokeMode.value !== 'stroke') ctx.fillStyle = color1.value, ctx.fill();
-      if (strokeMode.value !== 'fill') ctx.strokeStyle = color1.value, ctx.lineWidth = parseFloat(sizeEl.value), ctx.stroke();
-    }
-    ctx.restore();
-  }
+        document.getElementById('login-btn').addEventListener('click', () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            auth.signInWithEmailAndPassword(email, password).catch(error => {
+                displayAuthMessage('login-message', error.message, 'error');
+            });
+        });
 
-  // Round rect helper
-  function roundRect(c, x, y, w, h, r, fill, stroke){
-    if (typeof r === 'undefined') r = 5;
-    c.beginPath();
-    c.moveTo(x + r, y);
-    c.arcTo(x + w, y, x + w, y + h, r);
-    c.arcTo(x + w, y + h, x, y + h, r);
-    c.arcTo(x, y + h, x, y, r);
-    c.arcTo(x, y, x + w, y, r);
-    c.closePath();
-    if (fill) c.fill();
-    if (stroke) c.stroke();
-  }
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            auth.signOut();
+        });
 
-  // Flood fill already implemented above
+        function displayAuthMessage(form, message, type) {
+            const messageEl = document.getElementById(form);
+            messageEl.textContent = message;
+            messageEl.className = `auth-message ${type}`;
+            messageEl.classList.remove('hidden');
+        }
+        
+        document.getElementById('show-signup').addEventListener('click', () => toggleAuthForms(true));
+        document.getElementById('show-login').addEventListener('click', () => toggleAuthForms(false));
 
-  // Clipboard / selection minimal implementation (copy/paste whole canvas area)
-  btnCopy.addEventListener('click', () => {
-    appState.clipboard = ctx.getImageData(0,0, canvas.width / DPR, canvas.height / DPR);
-    updateStatus('Copied');
-  });
-  btnCut.addEventListener('click', () => {
-    appState.clipboard = ctx.getImageData(0,0, canvas.width / DPR, canvas.height / DPR);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0, canvas.width / DPR, canvas.height / DPR);
-    pushUndo(); updateStatus('Cut');
-  });
-  btnPaste.addEventListener('click', () => {
-    if (!appState.clipboard) return;
-    ctx.putImageData(appState.clipboard, 10, 10);
-    pushUndo(); updateStatus('Pasted');
-  });
-  // Crop: simple - crop to center 80% (user can adapt later)
-  btnCrop.addEventListener('click', () => {
-    const w = Math.round(canvas.width / DPR * 0.8), h = Math.round(canvas.height / DPR * 0.8);
-    const sx = Math.round((canvas.width / DPR - w)/2), sy = Math.round((canvas.height / DPR - h)/2);
-    const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h;
-    tmp.getContext('2d').putImageData(ctx.getImageData(sx, sy, w, h), 0, 0);
-    resizeCanvasTo(w, h);
-    ctx.drawImage(tmp, 0, 0);
-    pushUndo();
-  });
+        function toggleAuthForms(showSignup = true) {
+            loginForm.classList.toggle('hidden', showSignup);
+            signupForm.classList.toggle('hidden', !showSignup);
+            document.getElementById('login-message').classList.add('hidden');
+            document.getElementById('signup-message').classList.add('hidden');
+        }
 
-  // Rotate/Flip
-  function transformCanvas(fn, newW, newH){
-    const tmp = document.createElement('canvas');
-    tmp.width = canvas.width / DPR; tmp.height = canvas.height / DPR;
-    tmp.getContext('2d').drawImage(canvas, 0, 0);
-    const w = newW || tmp.width, h = newH || tmp.height;
-    resizeCanvasTo(w, h);
-    ctx.save();
-    fn(ctx, tmp);
-    ctx.restore();
-    pushUndo();
-  }
-  btnRotL.addEventListener('click', ()=> transformCanvas((c, img) => { c.translate(0, canvas.height / DPR); c.rotate(-Math.PI/2); c.drawImage(img, 0,0); }, canvas.height / DPR, canvas.width / DPR));
-  btnRotR.addEventListener('click', ()=> transformCanvas((c, img) => { c.translate(canvas.width / DPR, 0); c.rotate(Math.PI/2); c.drawImage(img, 0,0); }, canvas.height / DPR, canvas.width / DPR));
-  btnFlipH.addEventListener('click', ()=> transformCanvas((c,img) => { c.translate(canvas.width / DPR, 0); c.scale(-1,1); c.drawImage(img,0,0); }));
-  btnFlipV.addEventListener('click', ()=> transformCanvas((c,img) => { c.translate(0, canvas.height / DPR); c.scale(1,-1); c.drawImage(img,0,0); }));
+        function showAuthScreen() {
+            authContainer.classList.remove('hidden');
+            mainApp.classList.add('hidden');
+            loader.classList.add('hidden');
+        }
 
-  // Undo/Redo buttons
-  btnUndo.addEventListener('click', doUndo);
-  btnRedo.addEventListener('click', doRedo);
+        function initializeAppUI() {
+            authContainer.classList.add('hidden');
+            mainApp.classList.remove('hidden');
+            loader.classList.add('hidden');
+            // Initial load of posts
+            fetchPosts(); 
+            setupNavigation();
+        }
+        // --- END: Authentication Logic ---
+        
 
-  // New
-  btnNew.addEventListener('click', ()=> {
-    if (!confirm('Start new canvas? Current drawing will be lost if not saved.')) return;
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0, canvas.width / DPR, canvas.height / DPR);
-    pushUndo();
-  });
+        // --- START: UI Navigation & Modals ---
+        function setupNavigation() {
+            const navItems = document.querySelectorAll('.nav-item');
+            const screens = document.querySelectorAll('.main-content .screen');
 
-  // Save PNG
-  btnSavePng.addEventListener('click', ()=> {
-    const mime = 'image/png';
-    // create temporary canvas at logical size to capture true pixels
-    const tmp = document.createElement('canvas');
-    tmp.width = canvas.width / DPR; tmp.height = canvas.height / DPR;
-    tmp.getContext('2d').drawImage(canvas, 0, 0, tmp.width, tmp.height);
-    tmp.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'drawfun.png';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      updateStatus('Saved PNG');
-    }, mime);
-  });
+            navItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const targetScreenId = item.dataset.screen;
+                    
+                    navItems.forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    screens.forEach(s => s.classList.add('hidden'));
+                    document.getElementById(targetScreenId).classList.remove('hidden');
+                    
+                    if(targetScreenId === 'home-screen' && homeScreen.innerHTML.trim() === '') {
+                        fetchPosts(true); // Refresh if switching to an empty home
+                    }
+                });
+            });
+            
+            document.getElementById('nav-profile-btn').addEventListener('click', () => {
+                 document.querySelector('.nav-item.active').classList.remove('active');
+                 document.getElementById('nav-profile-btn').classList.add('active');
+                 screens.forEach(s => s.classList.add('hidden'));
+                 profileScreen.classList.remove('hidden');
+                 loadUserProfile(currentUser.uid);
+            });
+        }
+        
+        function showEditProfileModal(isFirstTime = false) {
+            document.getElementById('edit-username').value = currentUser.username || '';
+            document.getElementById('edit-display-name').value = currentUser.name || '';
+            document.getElementById('edit-bio').value = currentUser.bio || '';
+            document.getElementById('edit-avatar-url').value = currentUser.profilePicUrl || '';
 
-  // Save PDF using jsPDF (fit image to page)
-  btnSavePdf.addEventListener('click', async () => {
-    const { jsPDF } = window.jspdf;
-    const tmp = document.createElement('canvas');
-    tmp.width = canvas.width / DPR; tmp.height = canvas.height / DPR;
-    tmp.getContext('2d').drawImage(canvas,0,0, tmp.width, tmp.height);
-    const dataURL = tmp.toDataURL('image/png');
-    const doc = new jsPDF({
-      orientation: tmp.width > tmp.height ? 'l' : 'p',
-      unit: 'pt',
-      format: [tmp.width, tmp.height]
+            const cancelBtn = document.getElementById('edit-profile-cancel-btn');
+            const closeBtn = document.getElementById('edit-profile-close-btn');
+
+            if (isFirstTime) {
+                cancelBtn.classList.add('hidden');
+                closeBtn.classList.add('hidden');
+            } else {
+                cancelBtn.classList.remove('hidden');
+                closeBtn.classList.remove('hidden');
+            }
+            editProfileModal.classList.add('active');
+        }
+        
+        document.getElementById('edit-profile-close-btn').addEventListener('click', () => editProfileModal.classList.remove('active'));
+        document.getElementById('edit-profile-cancel-btn').addEventListener('click', () => editProfileModal.classList.remove('active'));
+
+        document.querySelectorAll('.close-modal').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.target.closest('.modal').classList.remove('active');
+            });
+        });
+
+        // --- END: UI Navigation & Modals ---
+
+
+        // --- START: Profile Logic ---
+        
+        async function loadUserProfile(userId) {
+            // ... load user profile data and display it
+            const userDoc = await db.collection('users').doc(userId).get();
+            if(!userDoc.exists) return;
+            const userData = userDoc.data();
+
+            document.getElementById('profile-avatar').src = userData.profilePicUrl;
+            document.getElementById('profile-display-name').textContent = userData.name;
+            document.getElementById('profile-username').textContent = `@${userData.username}`;
+            document.getElementById('profile-bio').textContent = userData.bio;
+            document.getElementById('profile-post-count').textContent = userData.postCount || 0;
+            document.getElementById('profile-followers-count').textContent = userData.followersCount || 0;
+            document.getElementById('profile-following-count').textContent = userData.followingCount || 0;
+
+            const mainBtn = document.getElementById('profile-main-btn');
+            if(userId === currentUser.uid) {
+                mainBtn.textContent = 'Edit Profile';
+                mainBtn.className = 'profile-btn edit';
+                mainBtn.onclick = () => showEditProfileModal();
+            } else {
+                // follow/unfollow logic here
+            }
+            
+            // Load user's posts
+            loadUserPosts(userId);
+        }
+
+        async function loadUserPosts(userId) {
+            const feed = document.getElementById('profile-posts-feed');
+            feed.innerHTML = '<div class="loader" style="margin: 20px auto;"></div>';
+            const snapshot = await db.collection('posts').where('userId', '==', userId).orderBy('timestamp', 'desc').limit(20).get();
+            
+            feed.innerHTML = '';
+            if (snapshot.empty) {
+                feed.innerHTML = '<p style="text-align:center; color: var(--text-color-light);">No posts yet.</p>';
+                return;
+            }
+            snapshot.forEach(doc => {
+                const postEl = createPostElement(doc.id, doc.data());
+                feed.appendChild(postEl);
+            });
+        }
+        
+        document.getElementById('edit-profile-save-btn').addEventListener('click', async () => {
+            // Save profile logic
+             const newUsername = document.getElementById('edit-username').value.toLowerCase().trim();
+             const newName = document.getElementById('edit-display-name').value.trim();
+             const newBio = document.getElementById('edit-bio').value.trim();
+             const newAvatar = document.getElementById('edit-avatar-url').value.trim();
+             
+             // Basic validation
+             if (!newUsername || !newName) {
+                alert('Username and Display Name are required.');
+                return;
+             }
+             
+             // Check if username is available (if changed)
+             if (newUsername !== currentUser.username) {
+                const usernameDoc = await db.collection('usernames').doc(newUsername).get();
+                if (usernameDoc.exists) {
+                    alert('Username is already taken.');
+                    return;
+                }
+             }
+
+             const oldUsername = currentUser.username;
+
+             const updatedData = {
+                username: newUsername,
+                name: newName,
+                bio: newBio,
+                profilePicUrl: newAvatar,
+             };
+
+             await db.collection('users').doc(currentUser.uid).update(updatedData);
+
+             // Update username collection for uniqueness
+             const batch = db.batch();
+             if(oldUsername) {
+                const oldUsernameRef = db.collection('usernames').doc(oldUsername);
+                batch.delete(oldUsernameRef);
+             }
+             const newUsernameRef = db.collection('usernames').doc(newUsername);
+             batch.set(newUsernameRef, { uid: currentUser.uid });
+             await batch.commit();
+
+             currentUser = { ...currentUser, ...updatedData };
+             editProfileModal.classList.remove('active');
+             
+             // If this was the first time setup, initialize the app
+             if (mainApp.classList.contains('hidden')) {
+                initializeAppUI();
+             } else {
+                loadUserProfile(currentUser.uid); // Refresh profile view
+             }
+        });
+
+        // --- END: Profile Logic ---
+
+
+        // --- START: Home Feed & Post Logic ---
+        async function fetchPosts(isRefresh = false) {
+            if (isFetchingPosts) return;
+            isFetchingPosts = true;
+
+            if (isRefresh) {
+                lastVisiblePost = null;
+                homeScreen.innerHTML = '';
+            }
+            
+            const loaderEl = document.createElement('div');
+            loaderEl.className = 'loader';
+            loaderEl.style.margin = '20px auto';
+            homeScreen.appendChild(loaderEl);
+
+            try {
+                let query = db.collection('posts')
+                              .orderBy('timestamp', 'desc')
+                              .limit(10);
+                
+                if (lastVisiblePost) {
+                    query = query.startAfter(lastVisiblePost);
+                }
+
+                const snapshot = await snapshot.get();
+
+                loaderEl.remove();
+                
+                if(snapshot.empty && !lastVisiblePost) {
+                    homeScreen.innerHTML = '<p style="text-align:center; color: var(--text-color-light);">No posts to show. Follow people to see their posts here!</p>';
+                } else if(snapshot.empty && lastVisiblePost) {
+                    // Reached end of feed, loop back
+                    lastVisiblePost = null;
+                    fetchPosts(); // Start from beginning
+                    return;
+                }
+                
+                lastVisiblePost = snapshot.docs[snapshot.docs.length - 1];
+                
+                snapshot.forEach(doc => {
+                    const postEl = createPostElement(doc.id, doc.data());
+                    homeScreen.appendChild(postEl);
+                });
+
+            } catch (error) {
+                console.error("Error fetching posts:", error);
+                loaderEl.remove();
+                homeScreen.innerHTML += '<p style="text-align:center; color: var(--error-color);">Could not fetch posts.</p>';
+            }
+
+            isFetchingPosts = false;
+        }
+        
+        function createPostElement(postId, postData) {
+            const card = document.createElement('div');
+            card.className = 'post-card';
+            card.dataset.postId = postId;
+
+            const isLiked = postData.likes.includes(currentUser.uid);
+
+            card.innerHTML = `
+                <div class="post-header">
+                    <img src="${postData.authorAvatarUrl}" alt="avatar" class="post-avatar">
+                    <span class="post-author">@${postData.username}</span>
+                    <div class="post-options">
+                        <button class="options-btn">⋮</button>
+                        <div class="options-menu hidden">
+                           <!-- Options here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="post-content">${renderRichText(postData.content)}</div>
+                <div class="post-actions">
+                    <button class="action-btn like-btn">
+                        <span class="icon ${isLiked ? 'liked' : ''}">❤</span>
+                        <span class="count">${postData.likesCount || 0}</span>
+                    </button>
+                    <button class="action-btn comment-btn">
+                        <span class="icon">💬</span>
+                        <span class="count">${postData.commentCount || 0}</span>
+                    </button>
+                    <button class="action-btn">
+                        <span class="icon">👁️</span>
+                        <span class="count">${postData.views || 0}</span>
+                    </button>
+                </div>
+            `;
+            
+            // Add event listeners
+            card.querySelector('.like-btn').addEventListener('click', () => toggleLike(postId, card));
+            card.addEventListener('dblclick', (e) => {
+                if(!e.target.closest('.post-actions')){
+                   toggleLike(postId, card);
+                   card.classList.add('neon-glow');
+                   setTimeout(() => card.classList.remove('neon-glow'), 700);
+                }
+            });
+
+            return card;
+        }
+        
+        function renderRichText(text) {
+            let html = text;
+            // Image embeds
+            html = html.replace(/(https?:\/\/\S+\.(?:png|jpg|jpeg|gif))/gi, '<img src="$1" alt="post image">');
+            // YouTube embeds
+            html = html.replace(/https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/gi, 
+                '<div class="youtube-embed"><iframe src="https://www.youtube.com/embed/$1" frameborder="0" allowfullscreen></iframe></div>');
+            // Clickable links
+            html = html.replace(/(?<!href=")(?<!src=")(https?:\/\/[^\s<]+)/gi, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+            // Bold and Italic
+            // Note: This is a very simple parser. More complex scenarios may need a more robust solution.
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            return html;
+        }
+
+        async function toggleLike(postId, cardElement) {
+            const postRef = db.collection('posts').doc(postId);
+            const likeBtn = cardElement.querySelector('.like-btn .icon');
+            const likeCountEl = cardElement.querySelector('.like-btn .count');
+
+            await db.runTransaction(async (transaction) => {
+                const postDoc = await transaction.get(postRef);
+                if (!postDoc.exists) {
+                    throw "Document does not exist!";
+                }
+
+                const postData = postDoc.data();
+                const likes = postData.likes || [];
+                let newLikesCount = postData.likesCount || 0;
+                
+                if (likes.includes(currentUser.uid)) {
+                    // Unlike
+                    transaction.update(postRef, {
+                        likes: firebase.firestore.FieldValue.arrayRemove(currentUser.uid),
+                        likesCount: firebase.firestore.FieldValue.increment(-1)
+                    });
+                    newLikesCount--;
+                    likeBtn.classList.remove('liked');
+                } else {
+                    // Like
+                    transaction.update(postRef, {
+                        likes: firebase.firestore.FieldValue.arrayUnion(currentUser.uid),
+                        likesCount: firebase.firestore.FieldValue.increment(1)
+                    });
+                    newLikesCount++;
+                    likeBtn.classList.add('liked');
+                    likeBtn.style.animation = 'none';
+                    likeBtn.offsetHeight; /* trigger reflow */
+                    likeBtn.style.animation = 'bounceIn 0.5s';
+                }
+                 likeCountEl.textContent = newLikesCount;
+            });
+        }
+        
+        // Infinite scroll listener
+        document.querySelector('.main-content').addEventListener('scroll', (e) => {
+            const { scrollTop, scrollHeight, clientHeight } = e.target;
+            // Load more when 80% scrolled
+            if (scrollTop + clientHeight >= scrollHeight * 0.8 && !isFetchingPosts) {
+                fetchPosts();
+            }
+        });
+        
+        // --- END: Home Feed & Post Logic ---
+
     });
-    doc.addImage(dataURL, 'PNG', 0, 0, tmp.width, tmp.height);
-    doc.save('drawfun.pdf');
-    updateStatus('Saved PDF');
-  });
-
-  // Utility helpers
-  function pushUndoIfNeeded(){
-    pushUndo();
-  }
-
-  function hexWithAlpha(hex, op){
-    const {r,g,b} = hexToRgb(hex);
-    return `rgba(${r},${g},${b},${Math.max(0,Math.min(1, parseFloat(op)))})`;
-  }
-
-  // Basic keyboard shortcuts (works on desktop)
-  document.addEventListener('keydown', (e)=>{
-    if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); doUndo(); }
-    if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); doRedo(); }
-    if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); btnSavePng.click(); }
-    if (!e.ctrlKey && !e.metaKey){
-      const map = { 'b':'brush','p':'pencil','e':'eraser','g':'bucket','t':'text','l':'line','r':'rect','o':'ellipse','a':'spray','i':'picker' };
-      if (map[e.key]) {
-        // activate tool button
-        const btn = [...toolGrid.children].find(x=>x.dataset.tool === map[e.key]);
-        if (btn) { btn.click(); }
-      }
-    }
-  });
-
-  // Pointer listeners attach on canvas for both mouse/touch
-  canvas.addEventListener('pointerdown', (e) => { canvas.setPointerCapture(e.pointerId); startDraw(e); });
-  canvas.addEventListener('pointermove', (e) => { moveDraw(e); });
-  window.addEventListener('pointerup', (e) => { endDraw(e); });
-
-  // Helpers convert hex from CSS formats
-  function toHexColor(v){ return toHex(v); }
-
-  // Resize observer + initial layout adjustments
-  function layout(){
-    const logicalW = parseInt(cw.value) || 1200;
-    const logicalH = parseInt(ch.value) || 800;
-    resizeCanvasTo(logicalW, logicalH);
-    drawOverlayGrid();
-    updateStatus();
-  }
-  window.addEventListener('resize', ()=>{
-    canvas.style.maxWidth = (window.innerWidth - 16) + 'px';
-    canvas.style.maxHeight = (window.innerHeight - 160) + 'px';
-    drawOverlayGrid();
-  });
-
-  // Set initial CSS sizing based on logical canvas
-  function resizeCanvasTo(lw, lh){
-    DPR = Math.max(1, window.devicePixelRatio || 1);
-    canvas.width = Math.round(lw * DPR);
-    canvas.height = Math.round(lh * DPR);
-    overlay.width = canvas.width;
-    overlay.height = canvas.height;
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.scale(1,1);
-    // draw white background if empty
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0,0, lw, lh);
-    canvas.style.width = Math.min(window.innerWidth - 16, lw * appState.zoom) + 'px';
-    canvas.style.height = Math.min(window.innerHeight - 140, lh * appState.zoom) + 'px';
-    overlay.style.width = canvas.style.width;
-    overlay.style.height = canvas.style.height;
-    cw.value = lw; ch.value = lh;
-  }
-
-  // helpers for color conversions
-  function hexToRgb(hex) {
-    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return m ? { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) } : { r:0,g:0,b:0 };
-  }
-  function rgbToHex(r,g,b){ return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); }
-
-  // nice small utility to update status
-  function updateStatus(msg){
-    if (msg) statusL.textContent = msg;
-    const rect = canvas.getBoundingClientRect();
-    statusR.textContent = `${Math.round(appState.curr[0]||0)},${Math.round(appState.curr[1]||0)} • ${Math.round(appState.zoom*100)}%`;
-  }
-
-  // Swap colors
-  swapBtn.addEventListener('click', ()=> {
-    const t = color1.value; color1.value = color2.value; color2.value = t;
-  });
-
-  // Toggle sidebar
-  toggleSidebar.addEventListener('click', ()=> {
-    if (sidebar.style.display === 'none' || getComputedStyle(sidebar).display === 'none') sidebar.style.display = 'block';
-    else sidebar.style.display = 'none';
-  });
-
-  // Initial small actions
-  buildPalette();
-  canvas.style.touchAction = 'none';
-  updateStatus('Ready');
-
-})();
-</script>
+    </script>
 </body>
-</html>
+</html>```
